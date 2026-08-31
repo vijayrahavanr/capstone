@@ -1,0 +1,30 @@
+# Maven
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local environment / secrets
+.env
+*.env
+
+# Database local files
+*.db
+*.sqlite
+*.sqlite3
