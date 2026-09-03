@@ -28,6 +28,13 @@
             total = total.add(item.getSubtotal());
         }
     }
+
+    final String cartError =
+            (String) session.getAttribute("cartError");
+
+    if (cartError != null) {
+        session.removeAttribute("cartError");
+    }
 %>
 
 <!DOCTYPE html>
@@ -107,6 +114,10 @@
             font-size: 13px;
         }
 
+        .back:hover {
+            color: #c7d2fe;
+        }
+
         .heading {
             margin-bottom: 28px;
         }
@@ -122,6 +133,16 @@
         .heading h1 {
             margin-top: 8px;
             font-size: 34px;
+        }
+
+        .error {
+            margin-bottom: 20px;
+            padding: 13px 16px;
+            border-radius: 10px;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            font-size: 12px;
         }
 
         .cart {
@@ -203,6 +224,11 @@
             border-color: rgba(167, 139, 250, 0.35);
         }
 
+        .quantity-button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
         .quantity-value {
             min-width: 30px;
             text-align: center;
@@ -257,6 +283,25 @@
             font-weight: 800;
         }
 
+        .checkout-button {
+            width: 100%;
+            margin-top: 18px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            background: #6366f1;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .checkout-button:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+
         .empty {
             padding: 60px 20px;
             text-align: center;
@@ -273,6 +318,22 @@
         .empty p {
             color: #7f899a;
             font-size: 13px;
+        }
+
+        .shop-button {
+            display: inline-block;
+            margin-top: 18px;
+            padding: 11px 18px;
+            border-radius: 9px;
+            background: #6366f1;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .shop-button:hover {
+            background: #4f46e5;
         }
 
         @media (max-width: 600px) {
@@ -292,6 +353,10 @@
 
             .item-total {
                 grid-column: 2;
+            }
+
+            .heading h1 {
+                font-size: 28px;
             }
         }
 
@@ -332,6 +397,14 @@
 
     </section>
 
+    <% if (cartError != null && !cartError.isBlank()) { %>
+
+        <div class="error">
+            <%= cartError %>
+        </div>
+
+    <% } %>
+
     <% if (cartItems == null || cartItems.isEmpty()) { %>
 
         <section class="empty">
@@ -341,6 +414,11 @@
             <p>
                 Add products from the marketplace to continue.
             </p>
+
+            <a class="shop-button"
+               href="<%= request.getContextPath() %>/products">
+                Explore Products
+            </a>
 
         </section>
 
@@ -402,7 +480,8 @@
                                     class="quantity-button"
                                     type="submit"
                                     <%= item.getQuantity() <= 1
-                                            ? "disabled" : "" %>>
+                                            ? "disabled"
+                                            : "" %>>
                                     −
                                 </button>
 
@@ -432,7 +511,8 @@
                                     type="submit"
                                     <%= item.getQuantity()
                                             >= item.getStockQty()
-                                            ? "disabled" : "" %>>
+                                            ? "disabled"
+                                            : "" %>>
                                     +
                                 </button>
 
@@ -455,7 +535,8 @@
 
                         <a
                             class="remove"
-                            href="<%= request.getContextPath() %>/buyer/cart/remove?productId=<%= item.getProductId() %>">
+                            href="<%= request.getContextPath() %>/buyer/cart/remove?productId=<%= item.getProductId() %>"
+                            onclick="return confirm('Remove this product from your cart?');">
                             Remove
                         </a>
 
@@ -481,6 +562,18 @@
 
             </div>
 
+            <form
+                method="get"
+                action="<%= request.getContextPath() %>/buyer/checkout">
+
+                <button
+                    type="submit"
+                    class="checkout-button">
+                    Proceed to Checkout
+                </button>
+
+            </form>
+
         </section>
 
     <% } %>
@@ -488,4 +581,5 @@
 </main>
 
 </body>
+
 </html>

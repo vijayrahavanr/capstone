@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
+<%@ page import="com.vrmart.model.Product" %>
 <%@ page import="com.vrmart.model.User" %>
 
 <%
@@ -7,18 +8,27 @@
 
     if (user == null
             || !User.ROLE_SELLER.equals(user.getRole())) {
+
         response.sendRedirect(
                 request.getContextPath() + "/seller/login");
         return;
     }
 
+    final Product product =
+            (Product) request.getAttribute("product");
+
     final String error =
             (String) request.getAttribute("error");
+
+    if (product == null) {
+        response.sendRedirect(
+                request.getContextPath() + "/seller/products");
+        return;
+    }
 %>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 
     <meta charset="UTF-8">
@@ -26,7 +36,7 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
-    <title>VR Mart | Add Product</title>
+    <title>VR Mart | Modify Product</title>
 
     <style>
 
@@ -148,6 +158,29 @@
             font-size: 13px;
         }
 
+        .preview {
+            width: 100%;
+            height: 220px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #111522;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .no-image {
+            color: #687386;
+            font-size: 12px;
+        }
+
         button {
             width: 100%;
             padding: 14px;
@@ -190,8 +223,8 @@
         </div>
 
         <a class="back"
-           href="<%= request.getContextPath() %>/seller/dashboard.jsp">
-            ← Dashboard
+           href="<%= request.getContextPath() %>/seller/products">
+            ← My Products
         </a>
 
     </header>
@@ -200,10 +233,10 @@
 
         <small>Seller Portal</small>
 
-        <h1>Add Product</h1>
+        <h1>Modify Product</h1>
 
         <p>
-            Add a product to the VR Mart marketplace.
+            Update your product information.
         </p>
 
     </section>
@@ -218,28 +251,60 @@
 
         <% } %>
 
+        <div class="preview">
+
+            <% if (product.getImageUrl() != null
+                    && !product.getImageUrl().isBlank()) { %>
+
+                <img
+                    src="<%= product.getImageUrl() %>"
+                    alt="<%= product.getName() %>">
+
+            <% } else { %>
+
+                <span class="no-image">
+                    No image available
+                </span>
+
+            <% } %>
+
+        </div>
+
         <form method="post"
-              action="<%= request.getContextPath() %>/seller/products/add">
+              action="<%= request.getContextPath() %>/seller/products/edit">
+
+            <input type="hidden"
+                   name="id"
+                   value="<%= product.getId() %>">
 
             <div class="field">
 
-                <label for="name">Product Name</label>
+                <label for="name">
+                    Product Name
+                </label>
 
-                <input id="name"
-                       name="name"
-                       type="text"
-                       maxlength="150"
-                       required>
+                <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    maxlength="150"
+                    value="<%= product.getName() %>"
+                    required>
 
             </div>
 
             <div class="field">
 
-                <label for="description">Description</label>
+                <label for="description">
+                    Description
+                </label>
 
-                <textarea id="description"
-                          name="description"
-                          maxlength="1000"></textarea>
+                <textarea
+                    id="description"
+                    name="description"
+                    maxlength="1000"><%= product.getDescription() != null
+                            ? product.getDescription()
+                            : "" %></textarea>
 
             </div>
 
@@ -247,26 +312,34 @@
 
                 <div class="field">
 
-                    <label for="price">Price</label>
+                    <label for="price">
+                        Price
+                    </label>
 
-                    <input id="price"
-                           name="price"
-                           type="number"
-                           step="0.01"
-                           min="0"
-                           required>
+                    <input
+                        id="price"
+                        name="price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value="<%= product.getPrice() %>"
+                        required>
 
                 </div>
 
                 <div class="field">
 
-                    <label for="stockQty">Stock Quantity</label>
+                    <label for="stockQty">
+                        Stock Quantity
+                    </label>
 
-                    <input id="stockQty"
-                           name="stockQty"
-                           type="number"
-                           min="0"
-                           required>
+                    <input
+                        id="stockQty"
+                        name="stockQty"
+                        type="number"
+                        min="0"
+                        value="<%= product.getStockQty() %>"
+                        required>
 
                 </div>
 
@@ -274,31 +347,40 @@
 
             <div class="field">
 
-                <label for="category">Category</label>
+                <label for="category">
+                    Category
+                </label>
 
-                <input id="category"
-                       name="category"
-                       type="text"
-                       maxlength="100"
-                       placeholder="Example: Electronics"
-                       required>
+                <input
+                    id="category"
+                    name="category"
+                    type="text"
+                    maxlength="100"
+                    value="<%= product.getCategory() %>"
+                    required>
 
             </div>
 
             <div class="field">
 
-                <label for="imageUrl">Image URL</label>
+                <label for="imageUrl">
+                    Image URL
+                </label>
 
-                <input id="imageUrl"
-                       name="imageUrl"
-                       type="url"
-                       maxlength="1000"
-                       placeholder="https://example.com/product.jpg">
+                <input
+                    id="imageUrl"
+                    name="imageUrl"
+                    type="url"
+                    maxlength="1000"
+                    value="<%= product.getImageUrl() != null
+                            ? product.getImageUrl()
+                            : "" %>"
+                    placeholder="https://example.com/product.jpg">
 
             </div>
 
             <button type="submit">
-                Add Product
+                Save Changes
             </button>
 
         </form>
@@ -308,5 +390,4 @@
 </main>
 
 </body>
-
 </html>

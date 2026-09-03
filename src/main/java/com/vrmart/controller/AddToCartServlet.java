@@ -1,7 +1,9 @@
 package com.vrmart.controller;
 
 import com.vrmart.dao.CartDAO;
+import com.vrmart.dao.ProductDAO;
 import com.vrmart.listener.DatabaseListener;
+import com.vrmart.model.CartItem;
 import com.vrmart.model.User;
 
 import javax.servlet.ServletException;
@@ -13,6 +15,7 @@ import javax.servlet.http.HttpSession;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Handles adding products to a buyer cart.
@@ -32,6 +35,14 @@ public final class AddToCartServlet extends HttpServlet {
     /** Cart page path. */
     private static final String CART_PAGE = "/buyer/cart";
 
+    /**
+     * Processes an add-to-cart request.
+     *
+     * @param request HTTP request
+     * @param response HTTP response
+     * @throws ServletException when servlet processing fails
+     * @throws IOException when request processing fails
+     */
     @Override
     protected void doPost(
             final HttpServletRequest request,
@@ -75,8 +86,38 @@ public final class AddToCartServlet extends HttpServlet {
             final DataSource dataSource =
                     getDataSource(request);
 
+            final ProductDAO productDAO =
+                    new ProductDAO(dataSource);
+
+            final Integer stockQty =
+                    productDAO.findStock(productId);
+
+            if (stockQty == null) {
+                throw new IllegalArgumentException(
+                        "Product does not exist.");
+            }
+
             final CartDAO cartDAO =
                     new CartDAO(dataSource);
+
+            final List<CartItem> cartItems =
+                    cartDAO.findByBuyer(user.getId());
+
+            int existingQuantity = 0;
+
+            for (CartItem item : cartItems) {
+                if (item.getProductId() == productId) {
+                    existingQuantity =
+                            item.getQuantity();
+                    break;
+                }
+            }
+
+            if (existingQuantity + quantity > stockQty) {
+                throw new IllegalArgumentException(
+                        "Only " + stockQty
+                                + " item(s) are available in stock.");
+            }
 
             cartDAO.addItem(
                     user.getId(),

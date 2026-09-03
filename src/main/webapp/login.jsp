@@ -1,12 +1,18 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | VR Mart</title>
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>VR Mart | Login</title>
 
     <style>
+
         * {
             margin: 0;
             padding: 0;
@@ -32,7 +38,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            padding: 25px;
         }
 
         .background-glow {
@@ -57,9 +63,7 @@
 
         .page {
             width: 100%;
-            max-width: 1180px;
-            min-height: 680px;
-            padding: 30px;
+            max-width: 1050px;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 30px;
@@ -71,7 +75,7 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 50px;
+            padding: 45px;
         }
 
         .brand {
@@ -102,7 +106,6 @@
         .brand-name {
             font-size: 25px;
             font-weight: 800;
-            letter-spacing: -0.5px;
         }
 
         .brand-name span {
@@ -125,8 +128,8 @@
         }
 
         .brand-panel h1 {
-            font-size: clamp(42px, 5vw, 68px);
-            line-height: 1.02;
+            font-size: clamp(42px, 5vw, 62px);
+            line-height: 1.03;
             letter-spacing: -3px;
             margin-bottom: 22px;
         }
@@ -144,37 +147,16 @@
         }
 
         .brand-panel p {
-            max-width: 480px;
+            max-width: 450px;
             color: #9ca3af;
-            font-size: 16px;
+            font-size: 15px;
             line-height: 1.8;
-        }
-
-        .features {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 32px;
-        }
-
-        .feature {
-            padding: 10px 14px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.035);
-            border-radius: 12px;
-            color: #cbd5e1;
-            font-size: 13px;
-        }
-
-        .login-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .login-card {
             width: 100%;
-            max-width: 460px;
+            max-width: 450px;
+            margin: auto;
             padding: 42px;
             border-radius: 28px;
             background: rgba(17, 20, 31, 0.82);
@@ -188,119 +170,72 @@
         .login-card h2 {
             font-size: 30px;
             margin-bottom: 9px;
-            letter-spacing: -1px;
         }
 
         .subtitle {
             color: #8f98aa;
             font-size: 14px;
-            margin-bottom: 30px;
             line-height: 1.6;
+            margin-bottom: 28px;
         }
 
-        .error {
-            padding: 13px 15px;
-            margin-bottom: 20px;
-            border-radius: 12px;
-            color: #fecaca;
-            background: rgba(239, 68, 68, 0.10);
-            border: 1px solid rgba(239, 68, 68, 0.25);
-            font-size: 13px;
+        .role-list {
+            display: grid;
+            gap: 14px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            color: #d7dce5;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 9px;
-        }
-
-        .input-wrapper {
-            position: relative;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #687386;
-            font-size: 15px;
-            pointer-events: none;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 15px 16px 15px 43px;
-            border-radius: 13px;
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            background: rgba(255, 255, 255, 0.045);
-            color: #ffffff;
-            font-size: 14px;
-            outline: none;
-            transition: 0.25s ease;
-        }
-
-        .form-control::placeholder {
-            color: #626b7c;
-        }
-
-        .form-control:focus {
-            border-color: rgba(129, 140, 248, 0.7);
-            background: rgba(255, 255, 255, 0.065);
-            box-shadow:
-                0 0 0 4px rgba(99, 102, 241, 0.10);
-        }
-
-        .password-row {
+        .role-card {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-        }
-
-        .forgot {
-            color: #8b95ff;
+            justify-content: space-between;
+            padding: 20px;
+            border-radius: 16px;
             text-decoration: none;
-            font-size: 12px;
-        }
-
-        .forgot:hover {
-            color: #a5b4fc;
-        }
-
-        .login-button {
-            width: 100%;
-            border: none;
-            border-radius: 13px;
-            padding: 15px;
-            margin-top: 8px;
             color: #ffffff;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            background: linear-gradient(
-                135deg,
-                #6366f1,
-                #8b5cf6
-            );
-            box-shadow:
-                0 12px 30px rgba(99, 102, 241, 0.25);
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             transition: 0.25s ease;
         }
 
-        .login-button:hover {
-            transform: translateY(-2px);
-            box-shadow:
-                0 17px 35px rgba(99, 102, 241, 0.35);
+        .role-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(129, 140, 248, 0.55);
+            background: rgba(99, 102, 241, 0.08);
         }
 
-        .login-button:active {
-            transform: translateY(0);
+        .role-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .role-icon {
+            width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            background: rgba(99, 102, 241, 0.13);
+            color: #a5b4fc;
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        .role-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .role-description {
+            color: #737d90;
+            font-size: 11px;
+        }
+
+        .arrow {
+            color: #818cf8;
+            font-size: 20px;
         }
 
         .divider {
@@ -340,51 +275,46 @@
 
         .security {
             margin-top: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            text-align: center;
             color: #596273;
             font-size: 11px;
         }
 
         @media (max-width: 850px) {
+
             body {
-                overflow-y: auto;
+                padding: 20px;
             }
 
             .page {
                 grid-template-columns: 1fr;
-                padding: 20px;
             }
 
             .brand-panel {
-                padding: 25px 10px 5px;
+                padding: 20px 10px 5px;
                 text-align: center;
                 align-items: center;
             }
 
             .brand {
-                margin-bottom: 25px;
+                margin-bottom: 22px;
             }
 
             .brand-panel h1 {
-                font-size: 44px;
+                font-size: 42px;
             }
 
             .brand-panel p {
                 font-size: 14px;
             }
 
-            .features {
-                justify-content: center;
-            }
-
             .login-card {
                 padding: 30px 24px;
             }
         }
+
     </style>
+
 </head>
 
 <body>
@@ -397,15 +327,19 @@
     <section class="brand-panel">
 
         <div class="brand">
-            <div class="brand-logo">V</div>
+
+            <div class="brand-logo">
+                V
+            </div>
 
             <div class="brand-name">
                 VR <span>Mart</span>
             </div>
+
         </div>
 
         <div class="eyebrow">
-            Welcome back
+            Welcome Back
         </div>
 
         <h1>
@@ -414,100 +348,88 @@
         </h1>
 
         <p>
-            Sign in to continue exploring VR Mart —
-            a modern marketplace built for buyers,
-            sellers and businesses.
+            Choose how you want to access VR Mart.
+            Buyers can explore and shop products,
+            while sellers can manage their marketplace listings.
         </p>
-
-        <div class="features">
-            <div class="feature">✦ Smart Shopping</div>
-            <div class="feature">◈ Secure Accounts</div>
-            <div class="feature">◆ Trusted Marketplace</div>
-        </div>
 
     </section>
 
-    <section class="login-wrapper">
+    <section>
 
         <div class="login-card">
 
-            <h2>Sign in</h2>
+            <h2>
+                Sign in
+            </h2>
 
             <p class="subtitle">
-                Enter your credentials to access your account.
+                Select your account type to continue.
             </p>
 
-            <% if (request.getAttribute("error") != null) { %>
-                <div class="error">
-                    <%= request.getAttribute("error") %>
-                </div>
-            <% } %>
+            <div class="role-list">
 
-            <form
-                action="<%= request.getContextPath() %>/login"
-                method="post">
+                <a
+                    class="role-card"
+                    href="<%= request.getContextPath() %>/buyer/login.jsp">
 
-                <div class="form-group">
+                    <div class="role-content">
 
-                    <label for="username">
-                        Username
-                    </label>
+                        <div class="role-icon">
+                            B
+                        </div>
 
-                    <div class="input-wrapper">
+                        <div>
 
-                        <span class="input-icon">◉</span>
+                            <div class="role-title">
+                                Buyer Login
+                            </div>
 
-                        <input
-                            class="form-control"
-                            type="text"
-                            id="username"
-                            name="username"
-                            placeholder="Enter your username"
-                            autocomplete="username"
-                            required>
+                            <div class="role-description">
+                                Shop products and manage your cart
+                            </div>
+
+                        </div>
 
                     </div>
 
-                </div>
+                    <div class="arrow">
+                        →
+                    </div>
 
-                <div class="form-group">
+                </a>
 
-                    <div class="password-row">
+                <a
+                    class="role-card"
+                    href="<%= request.getContextPath() %>/seller/login.jsp">
 
-                        <label for="password">
-                            Password
-                        </label>
+                    <div class="role-content">
 
-                        <a class="forgot" href="#">
-                            Forgot password?
-                        </a>
+                        <div class="role-icon">
+                            S
+                        </div>
+
+                        <div>
+
+                            <div class="role-title">
+                                Seller Login
+                            </div>
+
+                            <div class="role-description">
+                                Manage products and marketplace listings
+                            </div>
+
+                        </div>
 
                     </div>
 
-                    <div class="input-wrapper">
-
-                        <span class="input-icon">◆</span>
-
-                        <input
-                            class="form-control"
-                            type="password"
-                            id="password"
-                            name="password"
-                            placeholder="Enter your password"
-                            autocomplete="current-password"
-                            required>
-
+                    <div class="arrow">
+                        →
                     </div>
 
-                </div>
+                </a>
 
-                <button
-                    class="login-button"
-                    type="submit">
-                    Sign in to VR Mart →
-                </button>
-
-            </form>
+            </div>
 
             <div class="divider">
                 New to VR Mart?
@@ -517,14 +439,15 @@
 
                 Don't have an account?
 
-                <a href="<%= request.getContextPath() %>/register">
-                    Create an account
+                <a
+                    href="<%= request.getContextPath() %>/register.jsp">
+                    Create Account
                 </a>
 
             </div>
 
             <div class="security">
-                🔒 Your account is protected
+                🔒 Secure role-based access
             </div>
 
         </div>
@@ -534,4 +457,5 @@
 </main>
 
 </body>
+
 </html>

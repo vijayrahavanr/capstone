@@ -1,10 +1,14 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page contentType="text/html; charset=UTF-8"
+         pageEncoding="UTF-8" %>
+
 <%@ page import="com.vrmart.model.User" %>
 
 <%
     final User user = (User) session.getAttribute("user");
 
-    if (user == null || !User.ROLE_SELLER.equals(user.getRole())) {
+    if (user == null
+            || !User.ROLE_SELLER.equals(user.getRole())) {
+
         response.sendRedirect(
                 request.getContextPath() + "/seller/login");
         return;
@@ -93,7 +97,7 @@
         .actions {
             display: grid;
             grid-template-columns:
-                repeat(2, minmax(0, 1fr));
+                repeat(3, minmax(0, 1fr));
             gap: 20px;
             margin-top: 35px;
         }
@@ -127,6 +131,14 @@
             color: #7f899a;
             font-size: 13px;
             line-height: 1.6;
+        }
+
+        @media (max-width: 850px) {
+
+            .actions {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
         }
 
         @media (max-width: 600px) {
@@ -177,6 +189,8 @@
 
     <section class="actions">
 
+        <!-- ADD PRODUCT -->
+
         <a class="card"
            href="<%= request.getContextPath() %>/seller/add-product.jsp">
 
@@ -190,15 +204,34 @@
 
         </a>
 
+
+        <!-- SELLER PRODUCTS -->
+
         <a class="card"
-           href="<%= request.getContextPath() %>/products">
+           href="<%= request.getContextPath() %>/seller/products">
 
             <div class="icon">▣</div>
 
             <h2>View Products</h2>
 
             <p>
-                View products currently available in VR Mart.
+                Manage products added by you to VR Mart.
+            </p>
+
+        </a>
+
+
+        <!-- INCOMING ORDERS -->
+
+        <a class="card"
+           href="<%= request.getContextPath() %>/seller/orders">
+
+            <div class="icon">🛒</div>
+
+            <h2>Incoming Orders</h2>
+
+            <p>
+                View orders received for your products.
             </p>
 
         </a>
