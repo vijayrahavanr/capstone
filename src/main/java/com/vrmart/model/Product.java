@@ -14,6 +14,9 @@ public final class Product {
     /** Seller identifier. */
     private long sellerId;
 
+    /** Seller username. */
+    private String sellerName;
+
     /** Product name. */
     private String productName;
 
@@ -37,6 +40,9 @@ public final class Product {
 
     /** Product update timestamp. */
     private LocalDateTime productUpdatedAt;
+
+    /** Whether VR Mart has assured the product. */
+    private boolean vrMartAssured;
 
     /**
      * Creates an empty product.
@@ -79,6 +85,24 @@ public final class Product {
      */
     public void setSellerId(final long value) {
         sellerId = value;
+    }
+
+    /**
+     * Returns the seller username.
+     *
+     * @return seller username
+     */
+    public String getSellerName() {
+        return sellerName;
+    }
+
+    /**
+     * Sets the seller username.
+     *
+     * @param value seller username
+     */
+    public void setSellerName(final String value) {
+        sellerName = value;
     }
 
     /**
@@ -187,6 +211,24 @@ public final class Product {
      */
     public void setImageUrl(final String value) {
         productImageUrl = value;
+    }
+
+    /**
+     * Returns whether VR Mart has assured this product.
+     *
+     * @return true when assured
+     */
+    public boolean isVrMartAssured() {
+        return vrMartAssured;
+    }
+
+    /**
+     * Sets the VR Mart assurance state.
+     *
+     * @param value assurance state
+     */
+    public void setVrMartAssured(final boolean value) {
+        vrMartAssured = value;
     }
 
     /**

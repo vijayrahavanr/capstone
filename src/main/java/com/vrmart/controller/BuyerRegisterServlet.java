@@ -4,8 +4,11 @@ import com.vrmart.dao.UserDAO;
 import com.vrmart.listener.DatabaseListener;
 import com.vrmart.model.User;
 import com.vrmart.service.AuthService;
+import com.vrmart.service.EmailService;
+import com.vrmart.service.OtpService;
 import com.zaxxer.hikari.HikariDataSource;
 
+import javax.mail.MessagingException;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -26,8 +29,16 @@ public final class BuyerRegisterServlet extends HttpServlet {
     /** Buyer registration page. */
     private static final String REGISTER_PAGE = "/buyer/register.jsp";
 
-    /** Buyer login page. */
-    private static final String LOGIN_PAGE = "/buyer/login";
+    /** Email verification endpoint. */
+    private static final String VERIFY_PAGE = "/verify-email";
+
+    /** Verification session email attribute. */
+    private static final String VERIFICATION_EMAIL =
+            "verificationEmail";
+
+    /** Email verification OTP purpose. */
+    private static final String OTP_PURPOSE =
+            "EMAIL_VERIFICATION";
 
     /**
      * Handles buyer registration form submission.
@@ -45,86 +56,76 @@ public final class BuyerRegisterServlet extends HttpServlet {
 
         request.setCharacterEncoding("UTF-8");
 
-        final String username =
-                request.getParameter("username");
-
-        final String email =
-                request.getParameter("email");
-
-        final String phone =
-                request.getParameter("phone");
-
-        final String password =
-                request.getParameter("password");
-
+        final String username = request.getParameter("username");
+        final String email = request.getParameter("email");
+        final String phone = request.getParameter("phone");
+        final String password = request.getParameter("password");
         final String confirmPassword =
                 request.getParameter("confirmPassword");
 
         if (password == null
                 || !password.equals(confirmPassword)) {
-
             request.setAttribute(
                     "error",
                     "Passwords do not match.");
-
-            request.getRequestDispatcher(
-                    REGISTER_PAGE)
+            request.getRequestDispatcher(REGISTER_PAGE)
                     .forward(request, response);
-
             return;
         }
 
         try {
-
             final HikariDataSource dataSource =
                     getDataSource(request);
-
-            final UserDAO userDAO =
-                    new UserDAO(dataSource);
-
+            final UserDAO userDAO = new UserDAO(dataSource);
             final AuthService authService =
                     new AuthService(userDAO);
 
-            final User user =
-                    authService.register(
-                            username,
-                            email,
-                            phone,
-                            password);
+            final User user = authService.register(
+                    username,
+                    email,
+                    phone,
+                    password);
 
-            /*
-             * Buyer registration always creates
-             * a BUYER account through AuthService.
-             */
             if (!User.ROLE_BUYER.equals(user.getRole())) {
-
                 throw new ServletException(
                         "Invalid buyer account role.");
             }
 
+            final OtpService otpService =
+                    new OtpService(new com.vrmart.dao.OtpDAO(dataSource));
+            final EmailService emailService =
+                    new EmailService();
+
+            final String otp = otpService.createOtp(
+                    user.getId(),
+                    OTP_PURPOSE);
+
+            emailService.sendOtpEmail(
+                    user.getEmail(),
+                    otp,
+                    "VR Mart Email Verification");
+
+            request.getSession().setAttribute(
+                    VERIFICATION_EMAIL,
+                    user.getEmail());
+
             response.sendRedirect(
                     request.getContextPath()
-                            + LOGIN_PAGE);
+                            + VERIFY_PAGE);
 
         } catch (IllegalArgumentException exception) {
-
             request.setAttribute(
                     "error",
                     exception.getMessage());
-
-            request.getRequestDispatcher(
-                    REGISTER_PAGE)
+            request.getRequestDispatcher(REGISTER_PAGE)
                     .forward(request, response);
 
-        } catch (SQLException exception) {
-
+        } catch (SQLException | MessagingException exception) {
             request.setAttribute(
                     "error",
-                    "Unable to create account right now. "
-                            + "Please try again.");
-
-            request.getRequestDispatcher(
-                    REGISTER_PAGE)
+                    "Account created, but verification email "
+                            + "could not be sent. Please try again.");
+            request.getRequestDispatcher(REGISTER_PAGE)
                     .forward(request, response);
         }
     }
@@ -143,8 +144,7 @@ public final class BuyerRegisterServlet extends HttpServlet {
             final HttpServletResponse response)
             throws ServletException, IOException {
 
-        request.getRequestDispatcher(
-                REGISTER_PAGE)
+        request.getRequestDispatcher(REGISTER_PAGE)
                 .forward(request, response);
     }
 
@@ -166,7 +166,6 @@ public final class BuyerRegisterServlet extends HttpServlet {
                                         .DATA_SOURCE_ATTRIBUTE);
 
         if (!(dataSource instanceof HikariDataSource)) {
-
             throw new ServletException(
                     "VR Mart database connection is unavailable.");
         }

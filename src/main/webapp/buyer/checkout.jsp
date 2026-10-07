@@ -1,6 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
-
 <%@ page import="com.vrmart.model.CartItem" %>
 <%@ page import="com.vrmart.model.User" %>
 <%@ page import="java.math.BigDecimal" %>
@@ -37,7 +36,6 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
 
     <meta name="viewport"
@@ -46,7 +44,6 @@
     <title>VR Mart | Checkout</title>
 
     <style>
-
         * {
             margin: 0;
             padding: 0;
@@ -280,7 +277,6 @@
         }
 
         @media (max-width: 750px) {
-
             .page {
                 padding: 20px;
             }
@@ -293,9 +289,7 @@
                 font-size: 28px;
             }
         }
-
     </style>
-
 </head>
 
 <body>
@@ -350,6 +344,43 @@
 
                 <div class="field">
 
+                    <label for="name">
+                        Customer Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        placeholder="Enter your full name"
+                        maxlength="100"
+                        autocomplete="name"
+                        required>
+
+                </div>
+
+                <div class="field">
+
+                    <label for="phone">
+                        Customer Phone Number
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        placeholder="Enter your 10-digit phone number"
+                        pattern="[6-9][0-9]{9}"
+                        maxlength="10"
+                        minlength="10"
+                        inputmode="numeric"
+                        autocomplete="tel"
+                        required>
+
+                </div>
+
+                <div class="field">
+
                     <label for="address">
                         Delivery Address
                     </label>
@@ -358,6 +389,7 @@
                         id="address"
                         name="address"
                         placeholder="Enter your complete delivery address"
+                        maxlength="500"
                         required></textarea>
 
                 </div>
@@ -372,7 +404,8 @@
                         type="text"
                         id="landmark"
                         name="landmark"
-                        placeholder="Nearby landmark (optional)">
+                        placeholder="Nearby landmark (optional)"
+                        maxlength="200">
 
                 </div>
 
@@ -408,14 +441,14 @@
                 </div>
 
                 <div class="payment-note">
-                    Payment is simulated for this project.
-                    No real payment will be processed.
+                    Your payment will be confirmed on the next step.
+                    This is a mock payment flow for the project.
                 </div>
 
                 <button
                     type="submit"
                     class="place-order">
-                    Place Order
+                    Proceed to Payment
                 </button>
 
                 <div class="secure">
@@ -479,5 +512,4 @@
 </main>
 
 </body>
-
 </html>

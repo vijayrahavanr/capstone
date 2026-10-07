@@ -27,38 +27,40 @@ public final class CartDAO {
     /** SQL query for finding all items for a buyer. */
     private static final String FIND_BY_BUYER_SQL =
             "SELECT c.id, c.buyer_id, c.product_id, "
-            + "c.quantity, p.name, p.price, "
-            + "p.stock_qty, p.image_url "
-            + "FROM cart_items c "
-            + "JOIN products p ON p.id = c.product_id "
-            + "WHERE c.buyer_id = ? "
-            + "ORDER BY c.created_at DESC";
+                    + "c.quantity, p.name, p.price, "
+                    + "p.stock_qty, p.image_url, "
+                    + "u.username AS seller_name "
+                    + "FROM cart_items c "
+                    + "JOIN products p ON p.id = c.product_id "
+                    + "JOIN users u ON u.id = p.seller_id "
+                    + "WHERE c.buyer_id = ? "
+                    + "ORDER BY c.created_at DESC";
 
     /** SQL query for inserting a cart item. */
     private static final String INSERT_SQL =
             "INSERT INTO cart_items "
-            + "(buyer_id, product_id, quantity) "
-            + "VALUES (?, ?, ?)";
+                    + "(buyer_id, product_id, quantity) "
+                    + "VALUES (?, ?, ?)";
 
     /** SQL query for finding an existing cart item. */
     private static final String FIND_ITEM_SQL =
             "SELECT quantity "
-            + "FROM cart_items "
-            + "WHERE buyer_id = ? "
-            + "AND product_id = ?";
+                    + "FROM cart_items "
+                    + "WHERE buyer_id = ? "
+                    + "AND product_id = ?";
 
     /** SQL query for updating cart quantity. */
     private static final String UPDATE_SQL =
             "UPDATE cart_items "
-            + "SET quantity = ?, updated_at = CURRENT_TIMESTAMP "
-            + "WHERE buyer_id = ? "
-            + "AND product_id = ?";
+                    + "SET quantity = ?, updated_at = CURRENT_TIMESTAMP "
+                    + "WHERE buyer_id = ? "
+                    + "AND product_id = ?";
 
     /** SQL query for deleting a cart item. */
     private static final String DELETE_SQL =
             "DELETE FROM cart_items "
-            + "WHERE buyer_id = ? "
-            + "AND product_id = ?";
+                    + "WHERE buyer_id = ? "
+                    + "AND product_id = ?";
 
     /** Database connection pool. */
     private final DataSource dataSource;
@@ -86,9 +88,9 @@ public final class CartDAO {
 
         try (Connection connection =
                      dataSource.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(
-                             FIND_BY_BUYER_SQL)) {
+                PreparedStatement statement =
+                        connection.prepareStatement(
+                                FIND_BY_BUYER_SQL)) {
 
             statement.setLong(
                     PARAM_ONE,
@@ -134,9 +136,9 @@ public final class CartDAO {
 
             try (Connection connection =
                          dataSource.getConnection();
-                 PreparedStatement statement =
-                         connection.prepareStatement(
-                                 INSERT_SQL)) {
+                    PreparedStatement statement =
+                            connection.prepareStatement(
+                                    INSERT_SQL)) {
 
                 statement.setLong(
                         PARAM_ONE,
@@ -184,9 +186,9 @@ public final class CartDAO {
 
         try (Connection connection =
                      dataSource.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(
-                             UPDATE_SQL)) {
+                PreparedStatement statement =
+                        connection.prepareStatement(
+                                UPDATE_SQL)) {
 
             statement.setInt(
                     PARAM_ONE,
@@ -217,9 +219,9 @@ public final class CartDAO {
 
         try (Connection connection =
                      dataSource.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(
-                             DELETE_SQL)) {
+                PreparedStatement statement =
+                        connection.prepareStatement(
+                                DELETE_SQL)) {
 
             statement.setLong(
                     PARAM_ONE,
@@ -247,9 +249,9 @@ public final class CartDAO {
 
         try (Connection connection =
                      dataSource.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(
-                             FIND_ITEM_SQL)) {
+                PreparedStatement statement =
+                        connection.prepareStatement(
+                                FIND_ITEM_SQL)) {
 
             statement.setLong(
                     PARAM_ONE,
@@ -298,6 +300,9 @@ public final class CartDAO {
 
         item.setProductName(
                 resultSet.getString("name"));
+
+        item.setSellerName(
+                resultSet.getString("seller_name"));
 
         item.setProductPrice(
                 resultSet.getBigDecimal("price"));

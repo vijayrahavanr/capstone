@@ -1,0 +1,30 @@
+<%
+    Object settingsObject = session.getAttribute("userSettings");
+    boolean vrMartDarkMode = true;
+
+    if (settingsObject instanceof com.vrmart.model.UserSettings) {
+        com.vrmart.model.UserSettings settings =
+                (com.vrmart.model.UserSettings) settingsObject;
+        vrMartDarkMode = settings.isDarkMode();
+    }
+%>
+
+<style>
+    :root {
+        --vr-bg: #0b1020;
+        --vr-surface: #11182b;
+        --vr-surface-2: #18223a;
+        --vr-text: #f5f7ff;
+        --vr-muted: #aab3c8;
+        --vr-border: rgba(255, 255, 255, 0.10);
+    }
+
+    body.vrmart-light {
+        --vr-bg: #f4f5fb;
+        --vr-surface: #ffffff;
+        --vr-surface-2: #f0f2f7;
+        --vr-text: #15182a;
+        --vr-muted: #687087;
+        --vr-border: rgba(20, 24, 45, 0.10);
+    }
+</style>

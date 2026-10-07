@@ -14,6 +14,12 @@ public final class Order {
     /** Buyer identifier. */
     private long buyerId;
 
+    /** Customer name. */
+    private String customerName;
+
+    /** Customer phone number. */
+    private String customerPhone;
+
     /** Total order amount. */
     private BigDecimal totalAmount;
 
@@ -72,7 +78,43 @@ public final class Order {
     }
 
     /**
-     * Returns the total amount.
+     * Returns customer name.
+     *
+     * @return customer name
+     */
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    /**
+     * Sets customer name.
+     *
+     * @param value customer name
+     */
+    public void setCustomerName(final String value) {
+        customerName = value;
+    }
+
+    /**
+     * Returns customer phone number.
+     *
+     * @return customer phone number
+     */
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    /**
+     * Sets customer phone number.
+     *
+     * @param value customer phone number
+     */
+    public void setCustomerPhone(final String value) {
+        customerPhone = value;
+    }
+
+    /**
+     * Returns total amount.
      *
      * @return total amount
      */
@@ -81,7 +123,7 @@ public final class Order {
     }
 
     /**
-     * Sets the total amount.
+     * Sets total amount.
      *
      * @param value total amount
      */
@@ -90,7 +132,7 @@ public final class Order {
     }
 
     /**
-     * Returns the order status.
+     * Returns order status.
      *
      * @return order status
      */
@@ -99,7 +141,7 @@ public final class Order {
     }
 
     /**
-     * Sets the order status.
+     * Sets order status.
      *
      * @param value order status
      */
@@ -108,7 +150,7 @@ public final class Order {
     }
 
     /**
-     * Returns the delivery address.
+     * Returns delivery address.
      *
      * @return delivery address
      */
@@ -117,7 +159,7 @@ public final class Order {
     }
 
     /**
-     * Sets the delivery address.
+     * Sets delivery address.
      *
      * @param value delivery address
      */
@@ -126,7 +168,7 @@ public final class Order {
     }
 
     /**
-     * Returns the delivery landmark.
+     * Returns delivery landmark.
      *
      * @return delivery landmark
      */
@@ -135,7 +177,7 @@ public final class Order {
     }
 
     /**
-     * Sets the delivery landmark.
+     * Sets delivery landmark.
      *
      * @param value delivery landmark
      */
@@ -144,7 +186,7 @@ public final class Order {
     }
 
     /**
-     * Returns the payment method.
+     * Returns payment method.
      *
      * @return payment method
      */
@@ -153,7 +195,7 @@ public final class Order {
     }
 
     /**
-     * Sets the payment method.
+     * Sets payment method.
      *
      * @param value payment method
      */
@@ -162,7 +204,7 @@ public final class Order {
     }
 
     /**
-     * Returns the creation timestamp.
+     * Returns creation timestamp.
      *
      * @return creation timestamp
      */
@@ -171,7 +213,7 @@ public final class Order {
     }
 
     /**
-     * Sets the creation timestamp.
+     * Sets creation timestamp.
      *
      * @param value creation timestamp
      */
@@ -180,7 +222,7 @@ public final class Order {
     }
 
     /**
-     * Returns the update timestamp.
+     * Returns update timestamp.
      *
      * @return update timestamp
      */
@@ -189,7 +231,7 @@ public final class Order {
     }
 
     /**
-     * Sets the update timestamp.
+     * Sets update timestamp.
      *
      * @param value update timestamp
      */

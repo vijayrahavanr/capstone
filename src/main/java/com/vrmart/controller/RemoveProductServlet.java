@@ -31,7 +31,7 @@ public final class RemoveProductServlet extends HttpServlet {
      * @throws IOException when redirect fails
      */
     @Override
-    protected void doGet(
+    protected void doPost(
             final HttpServletRequest request,
             final HttpServletResponse response)
             throws ServletException, IOException {
@@ -51,7 +51,7 @@ public final class RemoveProductServlet extends HttpServlet {
 
         try {
             final long productId =
-                    Long.parseLong(
+                    parseProductId(
                             request.getParameter("id"));
 
             final DataSource dataSource =
@@ -89,6 +89,30 @@ public final class RemoveProductServlet extends HttpServlet {
                     "Unable to remove product.",
                     exception);
         }
+    }
+
+    /**
+     * Parses and validates the product identifier.
+     *
+     * @param value submitted product identifier
+     * @return valid product identifier
+     */
+    private long parseProductId(final String value) {
+
+        if (value == null || value.isBlank()) {
+            throw new NumberFormatException(
+                    "Missing product identifier.");
+        }
+
+        final long productId =
+                Long.parseLong(value);
+
+        if (productId <= 0) {
+            throw new NumberFormatException(
+                    "Invalid product identifier.");
+        }
+
+        return productId;
     }
 
     /**

@@ -15,11 +15,21 @@ public final class AuthService {
     /** Minimum password length. */
     private static final int MINIMUM_PASSWORD_LENGTH = 8;
 
+    /** Maximum password length supported by BCrypt safely. */
+    private static final int MAXIMUM_PASSWORD_LENGTH = 72;
+
     /** Maximum username length. */
     private static final int MAXIMUM_USERNAME_LENGTH = 50;
 
+    /** Maximum email length. */
+    private static final int MAXIMUM_EMAIL_LENGTH = 254;
+
     /** BCrypt work factor. */
     private static final int BCRYPT_ROUNDS = 12;
+
+    /** Basic RFC-compatible email validation pattern. */
+    private static final String EMAIL_PATTERN =
+            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
 
     /** User data access object. */
     private final UserDAO userDAO;
@@ -50,7 +60,6 @@ public final class AuthService {
             final String email,
             final String phone,
             final String password) throws SQLException {
-
         return registerUser(
                 username,
                 email,
@@ -74,7 +83,6 @@ public final class AuthService {
             final String email,
             final String phone,
             final String password) throws SQLException {
-
         return registerUser(
                 username,
                 email,
@@ -107,13 +115,16 @@ public final class AuthService {
                 phone,
                 password);
 
-        if (userDAO.findByUsername(username.trim()) != null) {
+        final String normalizedUsername = username.trim();
+        final String normalizedEmail =
+                email.trim().toLowerCase();
+
+        if (userDAO.findByUsername(normalizedUsername) != null) {
             throw new IllegalArgumentException(
                     "Username is already registered.");
         }
 
-        if (userDAO.findByEmail(
-                email.trim().toLowerCase()) != null) {
+        if (userDAO.findByEmail(normalizedEmail) != null) {
             throw new IllegalArgumentException(
                     "Email is already registered.");
         }
@@ -123,11 +134,14 @@ public final class AuthService {
                 BCrypt.gensalt(BCRYPT_ROUNDS));
 
         final User user = new User(
-                username.trim(),
-                email.trim().toLowerCase(),
+                normalizedUsername,
+                normalizedEmail,
                 phone.trim(),
                 passwordHash,
                 role);
+
+        user.setEmailVerified(false);
+        user.setEmailVerifiedAt(null);
 
         userDAO.create(user);
 
@@ -171,11 +185,17 @@ public final class AuthService {
                     "Invalid username or password.");
         }
 
+        if (!User.ROLE_ADMIN.equals(user.getRole())
+                && !user.isEmailVerified()) {
+            throw new IllegalArgumentException(
+                    "Please verify your email before logging in.");
+        }
+
         return user;
     }
 
     /**
-     * Validates registration input.
+     * Validates registration input before accessing the DAO.
      *
      * @param username username
      * @param email email address
@@ -193,12 +213,21 @@ public final class AuthService {
                     "Username is required.");
         }
 
-        if (username.trim().length()
+        final String normalizedUsername = username.trim();
+
+        if (normalizedUsername.length()
                 > MAXIMUM_USERNAME_LENGTH) {
             throw new IllegalArgumentException(
                     "Username must not exceed "
-                    + MAXIMUM_USERNAME_LENGTH
-                    + " characters.");
+                            + MAXIMUM_USERNAME_LENGTH
+                            + " characters.");
+        }
+
+        if (!normalizedUsername.matches(
+                "^[A-Za-z0-9._-]+$")) {
+            throw new IllegalArgumentException(
+                    "Username may contain only letters, numbers, "
+                            + "dots, underscores, and hyphens.");
         }
 
         if (email == null || email.isBlank()) {
@@ -206,7 +235,16 @@ public final class AuthService {
                     "Email is required.");
         }
 
-        if (!email.trim().contains("@")) {
+        final String normalizedEmail =
+                email.trim().toLowerCase();
+
+        if (normalizedEmail.length()
+                > MAXIMUM_EMAIL_LENGTH) {
+            throw new IllegalArgumentException(
+                    "Email address is too long.");
+        }
+
+        if (!normalizedEmail.matches(EMAIL_PATTERN)) {
             throw new IllegalArgumentException(
                     "Enter a valid email address.");
         }
@@ -222,20 +260,28 @@ public final class AuthService {
                 < MINIMUM_PASSWORD_LENGTH) {
             throw new IllegalArgumentException(
                     "Password must contain at least "
-                    + MINIMUM_PASSWORD_LENGTH
-                    + " characters.");
+                            + MINIMUM_PASSWORD_LENGTH
+                            + " characters.");
+        }
+
+        if (password.length()
+                > MAXIMUM_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException(
+                    "Password must not exceed "
+                            + MAXIMUM_PASSWORD_LENGTH
+                            + " characters.");
         }
 
         if (!password.matches(".*[A-Z].*")) {
             throw new IllegalArgumentException(
                     "Password must contain at least one "
-                    + "uppercase letter.");
+                            + "uppercase letter.");
         }
 
         if (!password.matches(".*[a-z].*")) {
             throw new IllegalArgumentException(
                     "Password must contain at least one "
-                    + "lowercase letter.");
+                            + "lowercase letter.");
         }
 
         if (!password.matches(".*\\d.*")) {
@@ -247,7 +293,7 @@ public final class AuthService {
                 ".*[^A-Za-z0-9].*")) {
             throw new IllegalArgumentException(
                     "Password must contain at least one "
-                    + "special character.");
+                            + "special character.");
         }
     }
 }

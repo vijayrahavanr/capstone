@@ -22,12 +22,14 @@ import java.util.List;
  */
 @WebServlet("/buyer/cart/add")
 public final class AddToCartServlet extends HttpServlet {
-
     /** Serialization version. */
     private static final long serialVersionUID = 1L;
 
     /** Default quantity when none is supplied. */
     private static final int DEFAULT_QUANTITY = 1;
+
+    /** Maximum quantity allowed per request. */
+    private static final int MAX_QUANTITY = 1000;
 
     /** Products page path. */
     private static final String PRODUCTS_PAGE = "/products";
@@ -48,130 +50,132 @@ public final class AddToCartServlet extends HttpServlet {
             final HttpServletRequest request,
             final HttpServletResponse response)
             throws ServletException, IOException {
-
-        final HttpSession session =
-                request.getSession(false);
-
-        if (session == null) {
+        final HttpSession session = request.getSession(false);
+        if (!isBuyer(session)) {
             response.sendRedirect(
                     request.getContextPath() + "/login");
             return;
         }
-
-        final Object userObject =
-                session.getAttribute("user");
-
-        if (!(userObject instanceof User user)
-                || !User.ROLE_BUYER.equals(user.getRole())
-                || user.getId() == null) {
-
-            response.sendRedirect(
-                    request.getContextPath() + "/login");
-            return;
-        }
-
+        final User user = (User) session.getAttribute("user");
         try {
             final long productId =
-                    Long.parseLong(
-                            request.getParameter("productId"));
-
-            final int quantity =
-                    getQuantity(request);
-
-            if (quantity <= 0) {
-                throw new IllegalArgumentException(
-                        "Quantity must be greater than zero.");
-            }
-
-            final DataSource dataSource =
-                    getDataSource(request);
-
+                    parseId(request.getParameter("productId"));
+            final int quantity = getQuantity(request);
+            final DataSource dataSource = getDataSource(request);
             final ProductDAO productDAO =
                     new ProductDAO(dataSource);
-
             final Integer stockQty =
                     productDAO.findStock(productId);
-
             if (stockQty == null) {
                 throw new IllegalArgumentException(
                         "Product does not exist.");
             }
-
-            final CartDAO cartDAO =
-                    new CartDAO(dataSource);
-
+            if (stockQty <= 0) {
+                throw new IllegalArgumentException(
+                        "Product is out of stock.");
+            }
+            final CartDAO cartDAO = new CartDAO(dataSource);
             final List<CartItem> cartItems =
                     cartDAO.findByBuyer(user.getId());
-
             int existingQuantity = 0;
-
-            for (CartItem item : cartItems) {
+            for (final CartItem item : cartItems) {
                 if (item.getProductId() == productId) {
-                    existingQuantity =
-                            item.getQuantity();
+                    existingQuantity = item.getQuantity();
                     break;
                 }
             }
-
-            if (existingQuantity + quantity > stockQty) {
+            if (existingQuantity > stockQty
+                    || quantity > stockQty - existingQuantity) {
                 throw new IllegalArgumentException(
                         "Only " + stockQty
                                 + " item(s) are available in stock.");
             }
-
             cartDAO.addItem(
-                    user.getId(),
-                    productId,
-                    quantity);
-
+                    user.getId(), productId, quantity);
             response.sendRedirect(
                     request.getContextPath() + CART_PAGE);
-
         } catch (NumberFormatException exception) {
-
-            request.getSession().setAttribute(
-                    "cartError",
+            setCartError(
+                    request,
                     "Invalid product or quantity.");
-
             response.sendRedirect(
-                    request.getContextPath()
-                            + PRODUCTS_PAGE);
-
+                    request.getContextPath() + PRODUCTS_PAGE);
         } catch (IllegalArgumentException exception) {
-
-            request.getSession().setAttribute(
-                    "cartError",
+            setCartError(
+                    request,
                     exception.getMessage());
-
             response.sendRedirect(
-                    request.getContextPath()
-                            + PRODUCTS_PAGE);
-
+                    request.getContextPath() + PRODUCTS_PAGE);
         } catch (SQLException exception) {
-
             throw new ServletException(
-                    "Unable to add product to cart.",
-                    exception);
+                    "Unable to add product to cart.", exception);
         }
     }
 
     /**
-     * Reads the requested quantity.
+     * Checks whether the session belongs to a buyer.
+     *
+     * @param session HTTP session
+     * @return true when buyer is authenticated
+     */
+    private boolean isBuyer(final HttpSession session) {
+        if (session == null) {
+            return false;
+        }
+        final Object userObject = session.getAttribute("user");
+        return userObject instanceof User user
+                && User.ROLE_BUYER.equals(user.getRole())
+                && user.getId() != null;
+    }
+
+    /**
+     * Parses a positive product identifier.
+     *
+     * @param value submitted identifier
+     * @return validated identifier
+     */
+    private long parseId(final String value) {
+        if (value == null || value.isBlank()) {
+            throw new NumberFormatException("Missing product ID.");
+        }
+        final long id = Long.parseLong(value);
+        if (id <= 0) {
+            throw new NumberFormatException("Invalid product ID.");
+        }
+        return id;
+    }
+
+    /**
+     * Reads and validates the requested quantity.
      *
      * @param request HTTP request
-     * @return requested quantity
+     * @return validated quantity
      */
-    private int getQuantity(
-            final HttpServletRequest request) {
-
-        final String value =
-                request.getParameter("quantity");
-
+    private int getQuantity(final HttpServletRequest request) {
+        final String value = request.getParameter("quantity");
         if (value == null || value.isBlank()) {
             return DEFAULT_QUANTITY;
         }
+        final int quantity = Integer.parseInt(value);
+        if (quantity <= 0 || quantity > MAX_QUANTITY) {
+            throw new IllegalArgumentException(
+                    "Quantity must be between 1 and "
+                            + MAX_QUANTITY + ".");
+        }
+        return quantity;
+    }
 
-        return Integer.parseInt(value);
+    /**
+     * Stores a safe cart error message in the session.
+     *
+     * @param request HTTP request
+     * @param message error message
+     */
+    private void setCartError(
+            final HttpServletRequest request,
+            final String message) {
+        request.getSession(true).setAttribute(
+                "cartError", message);
     }
 
     /**
@@ -184,18 +188,13 @@ public final class AddToCartServlet extends HttpServlet {
     private DataSource getDataSource(
             final HttpServletRequest request)
             throws ServletException {
-
         final Object dataSource =
-                request.getServletContext()
-                        .getAttribute(
-                                DatabaseListener
-                                        .DATA_SOURCE_ATTRIBUTE);
-
-        if (!(dataSource instanceof DataSource)) {
+                request.getServletContext().getAttribute(
+                        DatabaseListener.DATA_SOURCE_ATTRIBUTE);
+        if (!(dataSource instanceof DataSource dataSourceObject)) {
             throw new ServletException(
                     "VR Mart database connection is unavailable.");
         }
-
-        return (DataSource) dataSource;
+        return dataSourceObject;
     }
 }

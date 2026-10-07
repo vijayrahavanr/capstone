@@ -1,9 +1,11 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Seller Login | VR Mart</title>
 
     <style>
@@ -245,6 +247,23 @@
                 0 17px 35px rgba(99, 102, 241, 0.35);
         }
 
+        .forgot {
+            margin-top: 14px;
+            text-align: right;
+            font-size: 13px;
+        }
+
+        .forgot a {
+            color: #a5b4fc;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .forgot a:hover {
+            color: #c4b5fd;
+            text-decoration: underline;
+        }
+
         .divider {
             display: flex;
             align-items: center;
@@ -432,6 +451,12 @@
                 </button>
 
             </form>
+
+            <div class="forgot">
+                <a href="<%= request.getContextPath() %>/forgot-password">
+                    Forgot Password?
+                </a>
+            </div>
 
             <div class="divider">
                 New seller?

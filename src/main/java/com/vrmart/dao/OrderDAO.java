@@ -20,19 +20,31 @@ import java.util.List;
 public final class OrderDAO {
 
     /** Pending order status. */
-    private static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_PENDING = "PENDING";
+
+    /** Approved order status. */
+    public static final String STATUS_APPROVED = "APPROVED";
+
+    /** Shipped order status. */
+    public static final String STATUS_SHIPPED = "SHIPPED";
+
+    /** Delivered order status. */
+    public static final String STATUS_DELIVERED = "DELIVERED";
+
+    /** Cancelled order status. */
+    public static final String STATUS_CANCELLED = "CANCELLED";
 
     /** SQL for creating an order. */
     private static final String CREATE_ORDER_SQL =
             "INSERT INTO orders "
-                    + "(buyer_id, total_amount, status, "
+                    + "(buyer_id, customer_name, customer_phone, "
+                    + "total_amount, status, delivery_address, "
+                    + "delivery_landmark, payment_method) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                    + "RETURNING id, buyer_id, customer_name, "
+                    + "customer_phone, total_amount, status, "
                     + "delivery_address, delivery_landmark, "
-                    + "payment_method) "
-                    + "VALUES (?, ?, ?, ?, ?, ?) "
-                    + "RETURNING id, buyer_id, total_amount, "
-                    + "status, delivery_address, "
-                    + "delivery_landmark, payment_method, "
-                    + "created_at, updated_at";
+                    + "payment_method, created_at, updated_at";
 
     /** SQL for creating an order item. */
     private static final String CREATE_ORDER_ITEM_SQL =
@@ -47,6 +59,14 @@ public final class OrderDAO {
                     + "WHERE id = ? "
                     + "AND stock_qty >= ?";
 
+    /** SQL for restoring stock after cancellation. */
+    private static final String RESTORE_STOCK_SQL =
+            "UPDATE products p "
+                    + "SET stock_qty = p.stock_qty + oi.quantity "
+                    + "FROM order_items oi "
+                    + "WHERE oi.order_id = ? "
+                    + "AND p.id = oi.product_id";
+
     /** SQL for clearing cart. */
     private static final String CLEAR_CART_SQL =
             "DELETE FROM cart_items "
@@ -54,12 +74,31 @@ public final class OrderDAO {
 
     /** SQL for finding buyer orders. */
     private static final String FIND_BY_BUYER_SQL =
-            "SELECT id, buyer_id, total_amount, status, "
-                    + "delivery_address, delivery_landmark, "
-                    + "payment_method, created_at, updated_at "
+            "SELECT id, buyer_id, customer_name, customer_phone, "
+                    + "total_amount, status, delivery_address, "
+                    + "delivery_landmark, payment_method, "
+                    + "created_at, updated_at "
                     + "FROM orders "
                     + "WHERE buyer_id = ? "
                     + "ORDER BY created_at DESC";
+
+    /** SQL for finding order items. */
+    private static final String FIND_ITEMS_BY_ORDER_SQL =
+            "SELECT oi.product_id, "
+                    + "p.name AS product_name, "
+                    + "oi.quantity, "
+                    + "oi.unit_price AS product_price, "
+                    + "u.username AS seller_name "
+                    + "FROM order_items oi "
+                    + "JOIN orders o "
+                    + "ON o.id = oi.order_id "
+                    + "JOIN products p "
+                    + "ON p.id = oi.product_id "
+                    + "JOIN users u "
+                    + "ON u.id = p.seller_id "
+                    + "WHERE oi.order_id = ? "
+                    + "AND o.buyer_id = ? "
+                    + "ORDER BY oi.product_id";
 
     /** SQL for finding seller incoming orders. */
     private static final String FIND_BY_SELLER_SQL =
@@ -83,12 +122,52 @@ public final class OrderDAO {
                     + "WHERE p.seller_id = ? "
                     + "ORDER BY o.created_at DESC, o.id DESC";
 
-    /** SQL for updating order status. */
-    private static final String UPDATE_STATUS_SQL =
+    /** SQL for seller status update. */
+    private static final String UPDATE_SELLER_STATUS_SQL =
             "UPDATE orders "
                     + "SET status = ?, "
                     + "updated_at = CURRENT_TIMESTAMP "
-                    + "WHERE id = ?";
+                    + "WHERE id = ? "
+                    + "AND EXISTS ("
+                    + "SELECT 1 "
+                    + "FROM order_items oi "
+                    + "JOIN products p "
+                    + "ON p.id = oi.product_id "
+                    + "WHERE oi.order_id = orders.id "
+                    + "AND p.seller_id = ?"
+                    + ") "
+                    + "AND ("
+                    + "(status = 'PENDING' AND ? = 'APPROVED') "
+                    + "OR "
+                    + "(status = 'APPROVED' AND ? = 'SHIPPED') "
+                    + "OR "
+                    + "(status = 'SHIPPED' AND ? = 'DELIVERED')"
+                    + ")";
+
+    /** SQL for buyer cancellation. */
+    private static final String CANCEL_BUYER_SQL =
+            "UPDATE orders "
+                    + "SET status = 'CANCELLED', "
+                    + "updated_at = CURRENT_TIMESTAMP "
+                    + "WHERE id = ? "
+                    + "AND buyer_id = ? "
+                    + "AND status IN ('PENDING', 'APPROVED')";
+
+    /** SQL for seller cancellation. */
+    private static final String CANCEL_SELLER_SQL =
+            "UPDATE orders "
+                    + "SET status = 'CANCELLED', "
+                    + "updated_at = CURRENT_TIMESTAMP "
+                    + "WHERE id = ? "
+                    + "AND status IN ('PENDING', 'APPROVED') "
+                    + "AND EXISTS ("
+                    + "SELECT 1 "
+                    + "FROM order_items oi "
+                    + "JOIN products p "
+                    + "ON p.id = oi.product_id "
+                    + "WHERE oi.order_id = orders.id "
+                    + "AND p.seller_id = ?"
+                    + ")";
 
     /** First parameter. */
     private static final int PARAM_ONE = 1;
@@ -108,6 +187,12 @@ public final class OrderDAO {
     /** Sixth parameter. */
     private static final int PARAM_SIX = 6;
 
+    /** Seventh parameter. */
+    private static final int PARAM_SEVEN = 7;
+
+    /** Eighth parameter. */
+    private static final int PARAM_EIGHT = 8;
+
     /** Database data source. */
     private final DataSource dataSource;
 
@@ -125,6 +210,8 @@ public final class OrderDAO {
      *
      * @param buyerId buyer identifier
      * @param cartItems cart items
+     * @param customerName customer name
+     * @param customerPhone customer phone
      * @param deliveryAddress delivery address
      * @param deliveryLandmark delivery landmark
      * @param paymentMethod payment method
@@ -134,6 +221,8 @@ public final class OrderDAO {
     public Order createOrder(
             final long buyerId,
             final List<CartItem> cartItems,
+            final String customerName,
+            final String customerPhone,
             final String deliveryAddress,
             final String deliveryLandmark,
             final String paymentMethod)
@@ -153,14 +242,25 @@ public final class OrderDAO {
                 final BigDecimal totalAmount =
                         calculateTotal(cartItems);
 
+                final Order orderData =
+                        new Order();
+
+                orderData.setBuyerId(buyerId);
+                orderData.setCustomerName(customerName);
+                orderData.setCustomerPhone(customerPhone);
+                orderData.setTotalAmount(totalAmount);
+                orderData.setStatus(STATUS_PENDING);
+                orderData.setDeliveryAddress(
+                        deliveryAddress);
+                orderData.setDeliveryLandmark(
+                        deliveryLandmark);
+                orderData.setPaymentMethod(
+                        paymentMethod);
+
                 final Order order =
                         insertOrder(
                                 connection,
-                                buyerId,
-                                totalAmount,
-                                deliveryAddress,
-                                deliveryLandmark,
-                                paymentMethod);
+                                orderData);
 
                 insertOrderItems(
                         connection,
@@ -223,6 +323,72 @@ public final class OrderDAO {
     }
 
     /**
+     * Finds products belonging to a buyer order.
+     *
+     * @param orderId order identifier
+     * @param buyerId buyer identifier
+     * @return order items
+     * @throws SQLException when database operation fails
+     */
+    public List<CartItem> findItemsByOrder(
+            final long orderId,
+            final long buyerId)
+            throws SQLException {
+
+        final List<CartItem> items =
+                new ArrayList<>();
+
+        try (Connection connection =
+                     dataSource.getConnection();
+             PreparedStatement statement =
+                     connection.prepareStatement(
+                             FIND_ITEMS_BY_ORDER_SQL)) {
+
+            statement.setLong(
+                    PARAM_ONE,
+                    orderId);
+
+            statement.setLong(
+                    PARAM_TWO,
+                    buyerId);
+
+            try (ResultSet resultSet =
+                         statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    final CartItem item =
+                            new CartItem();
+
+                    item.setProductId(
+                            resultSet.getLong(
+                                    "product_id"));
+
+                    item.setProductName(
+                            resultSet.getString(
+                                    "product_name"));
+
+                    item.setQuantity(
+                            resultSet.getInt(
+                                    "quantity"));
+
+                    item.setProductPrice(
+                            resultSet.getBigDecimal(
+                                    "product_price"));
+
+                    item.setSellerName(
+                            resultSet.getString(
+                                    "seller_name"));
+
+                    items.add(item);
+                }
+            }
+        }
+
+        return items;
+    }
+
+    /**
      * Finds incoming orders for a seller.
      *
      * @param sellerId seller identifier
@@ -260,15 +426,17 @@ public final class OrderDAO {
     }
 
     /**
-     * Updates the status of an order.
+     * Updates seller order status using the valid workflow.
      *
      * @param orderId order identifier
+     * @param sellerId seller identifier
      * @param status new status
-     * @return true when the order was updated
+     * @return true when updated
      * @throws SQLException when database operation fails
      */
     public boolean updateStatus(
             final long orderId,
+            final long sellerId,
             final String status)
             throws SQLException {
 
@@ -276,7 +444,7 @@ public final class OrderDAO {
                      dataSource.getConnection();
              PreparedStatement statement =
                      connection.prepareStatement(
-                             UPDATE_STATUS_SQL)) {
+                             UPDATE_SELLER_STATUS_SQL)) {
 
             statement.setString(
                     PARAM_ONE,
@@ -286,7 +454,111 @@ public final class OrderDAO {
                     PARAM_TWO,
                     orderId);
 
+            statement.setLong(
+                    PARAM_THREE,
+                    sellerId);
+
+            statement.setString(
+                    PARAM_FOUR,
+                    status);
+
+            statement.setString(
+                    PARAM_FIVE,
+                    status);
+
+            statement.setString(
+                    PARAM_SIX,
+                    status);
+
             return statement.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Cancels a buyer order and restores stock.
+     *
+     * @param orderId order identifier
+     * @param buyerId buyer identifier
+     * @return true when cancelled
+     * @throws SQLException when database operation fails
+     */
+    public boolean cancelByBuyer(
+            final long orderId,
+            final long buyerId)
+            throws SQLException {
+
+        try (Connection connection =
+                     dataSource.getConnection()) {
+
+            connection.setAutoCommit(false);
+
+            try {
+                final int updatedRows =
+                        cancelBuyerOrder(
+                                connection,
+                                orderId,
+                                buyerId);
+
+                if (updatedRows == 0) {
+                    connection.rollback();
+                    return false;
+                }
+
+                restoreStock(
+                        connection,
+                        orderId);
+
+                connection.commit();
+                return true;
+
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        }
+    }
+
+    /**
+     * Cancels a seller order and restores stock.
+     *
+     * @param orderId order identifier
+     * @param sellerId seller identifier
+     * @return true when cancelled
+     * @throws SQLException when database operation fails
+     */
+    public boolean cancelBySeller(
+            final long orderId,
+            final long sellerId)
+            throws SQLException {
+
+        try (Connection connection =
+                     dataSource.getConnection()) {
+
+            connection.setAutoCommit(false);
+
+            try {
+                final int updatedRows =
+                        cancelSellerOrder(
+                                connection,
+                                orderId,
+                                sellerId);
+
+                if (updatedRows == 0) {
+                    connection.rollback();
+                    return false;
+                }
+
+                restoreStock(
+                        connection,
+                        orderId);
+
+                connection.commit();
+                return true;
+
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
         }
     }
 
@@ -313,21 +585,13 @@ public final class OrderDAO {
      * Inserts the main order record.
      *
      * @param connection database connection
-     * @param buyerId buyer identifier
-     * @param totalAmount total amount
-     * @param deliveryAddress delivery address
-     * @param deliveryLandmark delivery landmark
-     * @param paymentMethod payment method
+     * @param order order data
      * @return created order
      * @throws SQLException when insertion fails
      */
     private Order insertOrder(
             final Connection connection,
-            final long buyerId,
-            final BigDecimal totalAmount,
-            final String deliveryAddress,
-            final String deliveryLandmark,
-            final String paymentMethod)
+            final Order order)
             throws SQLException {
 
         try (PreparedStatement statement =
@@ -336,27 +600,35 @@ public final class OrderDAO {
 
             statement.setLong(
                     PARAM_ONE,
-                    buyerId);
+                    order.getBuyerId());
 
-            statement.setBigDecimal(
+            statement.setString(
                     PARAM_TWO,
-                    totalAmount);
+                    order.getCustomerName());
 
             statement.setString(
                     PARAM_THREE,
-                    STATUS_PENDING);
+                    order.getCustomerPhone());
 
-            statement.setString(
+            statement.setBigDecimal(
                     PARAM_FOUR,
-                    deliveryAddress);
+                    order.getTotalAmount());
 
             statement.setString(
                     PARAM_FIVE,
-                    deliveryLandmark);
+                    order.getStatus());
 
             statement.setString(
                     PARAM_SIX,
-                    paymentMethod);
+                    order.getDeliveryAddress());
+
+            statement.setString(
+                    PARAM_SEVEN,
+                    order.getDeliveryLandmark());
+
+            statement.setString(
+                    PARAM_EIGHT,
+                    order.getPaymentMethod());
 
             try (ResultSet resultSet =
                          statement.executeQuery()) {
@@ -481,6 +753,92 @@ public final class OrderDAO {
     }
 
     /**
+     * Cancels a buyer order.
+     *
+     * @param connection database connection
+     * @param orderId order identifier
+     * @param buyerId buyer identifier
+     * @return number of updated rows
+     * @throws SQLException when update fails
+     */
+    private int cancelBuyerOrder(
+            final Connection connection,
+            final long orderId,
+            final long buyerId)
+            throws SQLException {
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(
+                             CANCEL_BUYER_SQL)) {
+
+            statement.setLong(
+                    PARAM_ONE,
+                    orderId);
+
+            statement.setLong(
+                    PARAM_TWO,
+                    buyerId);
+
+            return statement.executeUpdate();
+        }
+    }
+
+    /**
+     * Cancels a seller order.
+     *
+     * @param connection database connection
+     * @param orderId order identifier
+     * @param sellerId seller identifier
+     * @return number of updated rows
+     * @throws SQLException when update fails
+     */
+    private int cancelSellerOrder(
+            final Connection connection,
+            final long orderId,
+            final long sellerId)
+            throws SQLException {
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(
+                             CANCEL_SELLER_SQL)) {
+
+            statement.setLong(
+                    PARAM_ONE,
+                    orderId);
+
+            statement.setLong(
+                    PARAM_TWO,
+                    sellerId);
+
+            return statement.executeUpdate();
+        }
+    }
+
+    /**
+     * Restores stock for a cancelled order.
+     *
+     * @param connection database connection
+     * @param orderId order identifier
+     * @throws SQLException when stock update fails
+     */
+    private void restoreStock(
+            final Connection connection,
+            final long orderId)
+            throws SQLException {
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(
+                             RESTORE_STOCK_SQL)) {
+
+            statement.setLong(
+                    PARAM_ONE,
+                    orderId);
+
+            statement.executeUpdate();
+        }
+    }
+
+    /**
      * Maps a result to an Order model.
      *
      * @param resultSet database result
@@ -498,6 +856,14 @@ public final class OrderDAO {
 
         order.setBuyerId(
                 resultSet.getLong("buyer_id"));
+
+        order.setCustomerName(
+                resultSet.getString(
+                        "customer_name"));
+
+        order.setCustomerPhone(
+                resultSet.getString(
+                        "customer_phone"));
 
         order.setTotalAmount(
                 resultSet.getBigDecimal(

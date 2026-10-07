@@ -34,6 +34,12 @@ public final class User {
     /** User role. */
     private String role;
 
+    /** Email verification status. */
+    private boolean emailVerified;
+
+    /** Email verification timestamp. */
+    private LocalDateTime emailVerifiedAt;
+
     /** Account creation timestamp. */
     private LocalDateTime createdAt;
 
@@ -44,7 +50,6 @@ public final class User {
      * Creates an empty user.
      */
     public User() {
-        // Default constructor.
     }
 
     /**
@@ -62,11 +67,11 @@ public final class User {
             final String userPhone,
             final String userPasswordHash,
             final String userRole) {
-        this.username = userName;
-        this.email = userEmail;
-        this.phone = userPhone;
-        this.passwordHash = userPasswordHash;
-        this.role = userRole;
+        username = userName;
+        email = userEmail;
+        phone = userPhone;
+        passwordHash = userPasswordHash;
+        role = userRole;
     }
 
     /**
@@ -84,7 +89,7 @@ public final class User {
      * @param userId user ID
      */
     public void setId(final Long userId) {
-        this.id = userId;
+        id = userId;
     }
 
     /**
@@ -102,25 +107,25 @@ public final class User {
      * @param userName username
      */
     public void setUsername(final String userName) {
-        this.username = userName;
+        username = userName;
     }
 
     /**
-     * Gets the email.
+     * Gets the email address.
      *
-     * @return email
+     * @return email address
      */
     public String getEmail() {
         return email;
     }
 
     /**
-     * Sets the email.
+     * Sets the email address.
      *
      * @param userEmail email address
      */
     public void setEmail(final String userEmail) {
-        this.email = userEmail;
+        email = userEmail;
     }
 
     /**
@@ -138,7 +143,7 @@ public final class User {
      * @param userPhone phone number
      */
     public void setPhone(final String userPhone) {
-        this.phone = userPhone;
+        phone = userPhone;
     }
 
     /**
@@ -153,10 +158,10 @@ public final class User {
     /**
      * Sets the password hash.
      *
-     * @param userPasswordHash hashed password
+     * @param userPasswordHash password hash
      */
     public void setPasswordHash(final String userPasswordHash) {
-        this.passwordHash = userPasswordHash;
+        passwordHash = userPasswordHash;
     }
 
     /**
@@ -174,11 +179,48 @@ public final class User {
      * @param userRole user role
      */
     public void setRole(final String userRole) {
-        this.role = userRole;
+        role = userRole;
     }
 
     /**
-     * Gets the creation timestamp.
+     * Checks whether the email is verified.
+     *
+     * @return true when email is verified
+     */
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    /**
+     * Sets the email verification status.
+     *
+     * @param verified verification status
+     */
+    public void setEmailVerified(final boolean verified) {
+        emailVerified = verified;
+    }
+
+    /**
+     * Gets the email verification timestamp.
+     *
+     * @return verification timestamp
+     */
+    public LocalDateTime getEmailVerifiedAt() {
+        return emailVerifiedAt;
+    }
+
+    /**
+     * Sets the email verification timestamp.
+     *
+     * @param verificationTime verification timestamp
+     */
+    public void setEmailVerifiedAt(
+            final LocalDateTime verificationTime) {
+        emailVerifiedAt = verificationTime;
+    }
+
+    /**
+     * Gets the account creation timestamp.
      *
      * @return creation timestamp
      */
@@ -187,16 +229,17 @@ public final class User {
     }
 
     /**
-     * Sets the creation timestamp.
+     * Sets the account creation timestamp.
      *
      * @param creationTime creation timestamp
      */
-    public void setCreatedAt(final LocalDateTime creationTime) {
-        this.createdAt = creationTime;
+    public void setCreatedAt(
+            final LocalDateTime creationTime) {
+        createdAt = creationTime;
     }
 
     /**
-     * Gets the update timestamp.
+     * Gets the account update timestamp.
      *
      * @return update timestamp
      */
@@ -205,11 +248,12 @@ public final class User {
     }
 
     /**
-     * Sets the update timestamp.
+     * Sets the account update timestamp.
      *
      * @param updateTime update timestamp
      */
-    public void setUpdatedAt(final LocalDateTime updateTime) {
-        this.updatedAt = updateTime;
+    public void setUpdatedAt(
+            final LocalDateTime updateTime) {
+        updatedAt = updateTime;
     }
 }

@@ -121,7 +121,8 @@
         }
 
         input,
-        textarea {
+        textarea,
+        select {
             width: 100%;
             padding: 13px 14px;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -138,7 +139,8 @@
         }
 
         input:focus,
-        textarea:focus {
+        textarea:focus,
+        select:focus {
             border-color: #818cf8;
         }
 
@@ -351,13 +353,61 @@
                     Category
                 </label>
 
-                <input
+                <select
                     id="category"
                     name="category"
-                    type="text"
-                    maxlength="100"
-                    value="<%= product.getCategory() %>"
                     required>
+                    <option value="">Select category</option>
+                    <option value="Electronics"
+                        <%= "Electronics".equals(
+                                product.getCategory())
+                                ? "selected" : "" %>>
+                        Electronics
+                    </option>
+                    <option value="Fashion"
+                        <%= "Fashion".equals(product.getCategory())
+                                ? "selected" : "" %>>
+                        Fashion
+                    </option>
+                    <option value="Home & Kitchen"
+                        <%= "Home & Kitchen".equals(
+                                product.getCategory())
+                                ? "selected" : "" %>>
+                        Home &amp; Kitchen
+                    </option>
+                    <option value="Beauty"
+                        <%= "Beauty".equals(product.getCategory())
+                                ? "selected" : "" %>>
+                        Beauty
+                    </option>
+                    <option value="Grocery"
+                        <%= "Grocery".equals(product.getCategory())
+                                ? "selected" : "" %>>
+                        Grocery
+                    </option>
+                    <option value="Sports & Fitness"
+                        <%= "Sports & Fitness".equals(
+                                product.getCategory())
+                                ? "selected" : "" %>>
+                        Sports &amp; Fitness
+                    </option>
+                    <option value="Books"
+                        <%= "Books".equals(product.getCategory())
+                                ? "selected" : "" %>>
+                        Books
+                    </option>
+                    <option value="Toys"
+                        <%= "Toys".equals(product.getCategory())
+                                ? "selected" : "" %>>
+                        Toys
+                    </option>
+                    <option value="Accessories"
+                        <%= "Accessories".equals(
+                                product.getCategory())
+                                ? "selected" : "" %>>
+                        Accessories
+                    </option>
+                </select>
 
             </div>
 

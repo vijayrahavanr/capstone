@@ -47,7 +47,8 @@ public final class SellerOrdersServlet extends HttpServlet {
 
         if (!isSeller(session)) {
             response.sendRedirect(
-                    request.getContextPath() + "/login");
+                    request.getContextPath()
+                            + "/seller/login");
             return;
         }
 

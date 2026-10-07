@@ -41,26 +41,44 @@ public final class ProductDAO {
 
     /** SQL statement used to retrieve active products. */
     private static final String FIND_ALL_SQL =
-            "SELECT id, seller_id, name, description, price, stock_qty, "
-                    + "category, image_url, created_at, updated_at "
-                    + "FROM products "
-                    + "WHERE is_active = TRUE "
-                    + "ORDER BY created_at DESC";
+            "SELECT p.id, p.seller_id, p.name, p.description, "
+                    + "p.price, p.stock_qty, p.category, p.image_url, "
+                    + "p.created_at, p.updated_at, "
+                    + "u.username AS seller_name, "
+                    + "COALESCE(a.assured, FALSE) AS is_vr_mart_assured "
+                    + "FROM products p "
+                    + "JOIN users u ON u.id = p.seller_id "
+                    + "LEFT JOIN vr_mart_assurance a ON a.product_id = p.id "
+                    + "WHERE p.is_active = TRUE "
+                    + "ORDER BY p.created_at DESC";
 
     /** SQL statement used to retrieve active seller products. */
     private static final String FIND_BY_SELLER_SQL =
-            "SELECT id, seller_id, name, description, price, stock_qty, "
-                    + "category, image_url, created_at, updated_at "
-                    + "FROM products "
-                    + "WHERE seller_id = ? AND is_active = TRUE "
-                    + "ORDER BY created_at DESC";
+            "SELECT p.id, p.seller_id, p.name, p.description, "
+                    + "p.price, p.stock_qty, p.category, p.image_url, "
+                    + "p.created_at, p.updated_at, "
+                    + "u.username AS seller_name, "
+                    + "COALESCE(a.assured, FALSE) AS is_vr_mart_assured "
+                    + "FROM products p "
+                    + "JOIN users u ON u.id = p.seller_id "
+                    + "LEFT JOIN vr_mart_assurance a ON a.product_id = p.id "
+                    + "WHERE p.seller_id = ? "
+                    + "AND p.is_active = TRUE "
+                    + "ORDER BY p.created_at DESC";
 
     /** SQL statement used to retrieve one active seller product. */
     private static final String FIND_BY_ID_AND_SELLER_SQL =
-            "SELECT id, seller_id, name, description, price, stock_qty, "
-                    + "category, image_url, created_at, updated_at "
-                    + "FROM products "
-                    + "WHERE id = ? AND seller_id = ? AND is_active = TRUE";
+            "SELECT p.id, p.seller_id, p.name, p.description, "
+                    + "p.price, p.stock_qty, p.category, p.image_url, "
+                    + "p.created_at, p.updated_at, "
+                    + "u.username AS seller_name, "
+                    + "COALESCE(a.assured, FALSE) AS is_vr_mart_assured "
+                    + "FROM products p "
+                    + "JOIN users u ON u.id = p.seller_id "
+                    + "LEFT JOIN vr_mart_assurance a ON a.product_id = p.id "
+                    + "WHERE p.id = ? "
+                    + "AND p.seller_id = ? "
+                    + "AND p.is_active = TRUE";
 
     /** SQL statement used to create a product. */
     private static final String CREATE_SQL =
@@ -139,7 +157,8 @@ public final class ProductDAO {
 
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement =
-                        connection.prepareStatement(FIND_BY_SELLER_SQL)) {
+                        connection.prepareStatement(
+                                FIND_BY_SELLER_SQL)) {
 
             statement.setLong(PARAM_1, sellerId);
 
@@ -350,6 +369,9 @@ public final class ProductDAO {
         product.setSellerId(
                 resultSet.getLong("seller_id"));
 
+        product.setSellerName(
+                resultSet.getString("seller_name"));
+
         product.setName(
                 resultSet.getString("name"));
 
@@ -367,6 +389,9 @@ public final class ProductDAO {
 
         product.setImageUrl(
                 resultSet.getString("image_url"));
+
+        product.setVrMartAssured(
+                resultSet.getBoolean("is_vr_mart_assured"));
 
         if (resultSet.getTimestamp("created_at") != null) {
             product.setCreatedAt(

@@ -19,6 +19,9 @@ public final class CartItem {
     /** Product name. */
     private String productName;
 
+    /** Seller username. */
+    private String sellerName;
+
     /** Product price. */
     private BigDecimal productPrice;
 
@@ -101,6 +104,24 @@ public final class CartItem {
      */
     public void setProductName(final String value) {
         productName = value;
+    }
+
+    /**
+     * Returns the seller username.
+     *
+     * @return seller username
+     */
+    public String getSellerName() {
+        return sellerName;
+    }
+
+    /**
+     * Sets the seller username.
+     *
+     * @param value seller username
+     */
+    public void setSellerName(final String value) {
+        sellerName = value;
     }
 
     /**

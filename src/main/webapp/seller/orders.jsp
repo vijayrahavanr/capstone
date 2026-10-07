@@ -28,6 +28,12 @@
     final DateTimeFormatter formatter =
             DateTimeFormatter.ofPattern(
                     "dd MMM yyyy, hh:mm a");
+
+    final String message =
+            request.getParameter("message");
+
+    final String error =
+            request.getParameter("error");
 %>
 
 <!DOCTYPE html>
@@ -71,12 +77,12 @@
             margin-bottom: 35px;
         }
 
-        .title-section h1 {
+        h1 {
             margin: 0;
             font-size: 32px;
         }
 
-        .title-section p {
+        .subtitle {
             margin: 8px 0 0;
             color: #94a3b8;
         }
@@ -102,21 +108,25 @@
             background: #334155;
         }
 
-        .empty {
-            text-align: center;
-            padding: 70px 20px;
-            border: 1px solid #263244;
-            border-radius: 18px;
-            background: #111827;
+        .message,
+        .error {
+            margin-bottom: 22px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
         }
 
-        .empty h2 {
-            margin-bottom: 10px;
+        .message {
+            background: #14532d;
+            border: 1px solid #22c55e;
+            color: #bbf7d0;
         }
 
-        .empty p {
-            color: #94a3b8;
-            margin-bottom: 25px;
+        .error {
+            background: #450a0a;
+            border: 1px solid #ef4444;
+            color: #fecaca;
         }
 
         .order-list {
@@ -136,7 +146,6 @@
         .order-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
             gap: 20px;
             padding-bottom: 18px;
             border-bottom: 1px solid #263244;
@@ -148,13 +157,13 @@
         }
 
         .order-date {
+            margin-top: 6px;
             color: #94a3b8;
             font-size: 13px;
-            margin-top: 6px;
         }
 
         .status {
-            display: inline-block;
+            height: fit-content;
             padding: 7px 12px;
             border-radius: 20px;
             background: #172554;
@@ -200,34 +209,91 @@
             grid-column: span 2;
         }
 
-        .status-form {
+        .workflow {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #263244;
+        }
+
+        .workflow-title {
+            color: #94a3b8;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .workflow-actions {
             display: flex;
-            gap: 8px;
-            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
-        .status-select {
-            padding: 9px 12px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: #f8fafc;
-            font-size: 13px;
+        .action-form {
+            display: inline-block;
         }
 
-        .update-button {
-            padding: 9px 13px;
+        .approve-button,
+        .ship-button,
+        .deliver-button,
+        .cancel-button {
+            padding: 10px 16px;
             border: 0;
-            border-radius: 8px;
-            background: #4f46e5;
+            border-radius: 9px;
             color: #ffffff;
             font-size: 13px;
             font-weight: bold;
             cursor: pointer;
         }
 
-        .update-button:hover {
-            background: #6366f1;
+        .approve-button {
+            background: #16a34a;
+        }
+
+        .approve-button:hover {
+            background: #22c55e;
+        }
+
+        .ship-button {
+            background: #2563eb;
+        }
+
+        .ship-button:hover {
+            background: #3b82f6;
+        }
+
+        .deliver-button {
+            background: #7c3aed;
+        }
+
+        .deliver-button:hover {
+            background: #8b5cf6;
+        }
+
+        .cancel-button {
+            background: #dc2626;
+        }
+
+        .cancel-button:hover {
+            background: #ef4444;
+        }
+
+        .info {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 70px 20px;
+            border: 1px solid #263244;
+            border-radius: 18px;
+            background: #111827;
+        }
+
+        .empty p {
+            color: #94a3b8;
+            margin-bottom: 25px;
         }
 
         @media (max-width: 800px) {
@@ -260,19 +326,6 @@
             .actions {
                 width: 100%;
             }
-
-            .button {
-                flex: 1;
-                text-align: center;
-            }
-
-            .status-form {
-                width: 100%;
-            }
-
-            .status-select {
-                flex: 1;
-            }
         }
 
     </style>
@@ -285,12 +338,12 @@
 
     <div class="topbar">
 
-        <div class="title-section">
+        <div>
 
             <h1>Incoming Orders</h1>
 
-            <p>
-                Orders containing your products
+            <p class="subtitle">
+                Review, approve and manage customer orders
             </p>
 
         </div>
@@ -311,6 +364,22 @@
 
     </div>
 
+    <% if (message != null && !message.isBlank()) { %>
+
+        <div class="message">
+            <%= message %>
+        </div>
+
+    <% } %>
+
+    <% if (error != null && !error.isBlank()) { %>
+
+        <div class="error">
+            <%= error %>
+        </div>
+
+    <% } %>
+
     <%
         if (orders == null || orders.isEmpty()) {
     %>
@@ -320,8 +389,8 @@
             <h2>No Incoming Orders</h2>
 
             <p>
-                You haven't received any orders for
-                your products yet.
+                You haven't received any orders
+                for your products yet.
             </p>
 
             <a class="button"
@@ -355,7 +424,7 @@
                                 <%= order.getCreatedAt() == null
                                         ? "Date unavailable"
                                         : order.getCreatedAt()
-                                            .format(formatter) %>
+                                                .format(formatter) %>
                             </div>
 
                         </div>
@@ -461,73 +530,148 @@
                             <span class="value">
                                 <%= order.getDeliveryLandmark() == null
                                         || order.getDeliveryLandmark()
-                                            .isEmpty()
+                                                .isEmpty()
                                         ? "Not provided"
                                         : order.getDeliveryLandmark() %>
                             </span>
 
                         </div>
 
-                        <div class="detail wide">
+                    </div>
 
-                            <span class="label">
-                                Update Status
-                            </span>
+                    <div class="workflow">
 
-                            <form class="status-form"
-                                  method="post"
-                                  action="<%= request.getContextPath() %>/seller/orders/status">
+                        <div class="workflow-title">
+                            Order Actions
+                        </div>
 
-                                <input type="hidden"
-                                       name="orderId"
-                                       value="<%= order.getOrderId() %>">
+                        <div class="workflow-actions">
 
-                                <select class="status-select"
-                                        name="status">
+                            <%
+                                if ("PENDING".equals(
+                                        order.getStatus())) {
+                            %>
 
-                                    <option value="PENDING"
-                                            <%= "PENDING".equals(
-                                                    order.getStatus())
-                                                    ? "selected" : "" %>>
-                                        PENDING
-                                    </option>
+                                <form class="action-form"
+                                      method="post"
+                                      action="<%= request.getContextPath() %>/seller/orders/status">
 
-                                    <option value="CONFIRMED"
-                                            <%= "CONFIRMED".equals(
-                                                    order.getStatus())
-                                                    ? "selected" : "" %>>
-                                        CONFIRMED
-                                    </option>
+                                    <input type="hidden"
+                                           name="orderId"
+                                           value="<%= order.getOrderId() %>">
 
-                                    <option value="PROCESSING"
-                                            <%= "PROCESSING".equals(
-                                                    order.getStatus())
-                                                    ? "selected" : "" %>>
-                                        PROCESSING
-                                    </option>
+                                    <input type="hidden"
+                                           name="status"
+                                           value="APPROVED">
 
-                                    <option value="SHIPPED"
-                                            <%= "SHIPPED".equals(
-                                                    order.getStatus())
-                                                    ? "selected" : "" %>>
-                                        SHIPPED
-                                    </option>
+                                    <button class="approve-button"
+                                            type="submit">
+                                        Approve Order
+                                    </button>
 
-                                    <option value="DELIVERED"
-                                            <%= "DELIVERED".equals(
-                                                    order.getStatus())
-                                                    ? "selected" : "" %>>
-                                        DELIVERED
-                                    </option>
+                                </form>
 
-                                </select>
+                                <form class="action-form"
+                                      method="post"
+                                      action="<%= request.getContextPath() %>/seller/orders/cancel"
+                                      onsubmit="return confirm('Cancel this order?');">
 
-                                <button class="update-button"
-                                        type="submit">
-                                    Update
-                                </button>
+                                    <input type="hidden"
+                                           name="orderId"
+                                           value="<%= order.getOrderId() %>">
 
-                            </form>
+                                    <button class="cancel-button"
+                                            type="submit">
+                                        Cancel Order
+                                    </button>
+
+                                </form>
+
+                            <%
+                                } else if ("APPROVED".equals(
+                                        order.getStatus())) {
+                            %>
+
+                                <form class="action-form"
+                                      method="post"
+                                      action="<%= request.getContextPath() %>/seller/orders/status">
+
+                                    <input type="hidden"
+                                           name="orderId"
+                                           value="<%= order.getOrderId() %>">
+
+                                    <input type="hidden"
+                                           name="status"
+                                           value="SHIPPED">
+
+                                    <button class="ship-button"
+                                            type="submit">
+                                        Mark as Shipped
+                                    </button>
+
+                                </form>
+
+                                <form class="action-form"
+                                      method="post"
+                                      action="<%= request.getContextPath() %>/seller/orders/cancel"
+                                      onsubmit="return confirm('Cancel this order?');">
+
+                                    <input type="hidden"
+                                           name="orderId"
+                                           value="<%= order.getOrderId() %>">
+
+                                    <button class="cancel-button"
+                                            type="submit">
+                                        Cancel Order
+                                    </button>
+
+                                </form>
+
+                            <%
+                                } else if ("SHIPPED".equals(
+                                        order.getStatus())) {
+                            %>
+
+                                <form class="action-form"
+                                      method="post"
+                                      action="<%= request.getContextPath() %>/seller/orders/status">
+
+                                    <input type="hidden"
+                                           name="orderId"
+                                           value="<%= order.getOrderId() %>">
+
+                                    <input type="hidden"
+                                           name="status"
+                                           value="DELIVERED">
+
+                                    <button class="deliver-button"
+                                            type="submit">
+                                        Mark as Delivered
+                                    </button>
+
+                                </form>
+
+                            <%
+                                } else if ("DELIVERED".equals(
+                                        order.getStatus())) {
+                            %>
+
+                                <span class="info">
+                                    Order completed successfully.
+                                </span>
+
+                            <%
+                                } else if ("CANCELLED".equals(
+                                        order.getStatus())) {
+                            %>
+
+                                <span class="info">
+                                    This order has been cancelled.
+                                </span>
+
+                            <%
+                                }
+                            %>
 
                         </div>
 

@@ -1,6 +1,7 @@
 package com.vrmart.controller;
 
 import com.vrmart.dao.UserDAO;
+import com.vrmart.dao.UserSettingsDAO;
 import com.vrmart.listener.DatabaseListener;
 import com.vrmart.model.User;
 import com.vrmart.service.AuthService;
@@ -25,12 +26,10 @@ public final class BuyerLoginServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     /** Buyer login page. */
-    private static final String LOGIN_PAGE =
-            "/buyer/login.jsp";
+    private static final String LOGIN_PAGE = "/buyer/login.jsp";
 
-    /** Buyer dashboard page. */
-    private static final String BUYER_DASHBOARD =
-            "/buyer/dashboard.jsp";
+    /** Buyer dashboard route. */
+    private static final String BUYER_DASHBOARD = "/buyer/dashboard";
 
     /**
      * Displays the buyer login page.
@@ -45,7 +44,6 @@ public final class BuyerLoginServlet extends HttpServlet {
             final HttpServletRequest request,
             final HttpServletResponse response)
             throws ServletException, IOException {
-
         request.getRequestDispatcher(LOGIN_PAGE)
                 .forward(request, response);
     }
@@ -63,68 +61,46 @@ public final class BuyerLoginServlet extends HttpServlet {
             final HttpServletRequest request,
             final HttpServletResponse response)
             throws ServletException, IOException {
-
         request.setCharacterEncoding("UTF-8");
-
-        final String username =
-                request.getParameter("username");
-
-        final String password =
-                request.getParameter("password");
+        final String username = request.getParameter("username");
+        final String password = request.getParameter("password");
 
         try {
-            final HikariDataSource dataSource =
-                    getDataSource(request);
-
-            final UserDAO userDAO =
-                    new UserDAO(dataSource);
-
-            final AuthService authService =
-                    new AuthService(userDAO);
-
-            final User user =
-                    authService.authenticate(
-                            username,
-                            password);
+            final HikariDataSource dataSource = getDataSource(request);
+            final UserDAO userDAO = new UserDAO(dataSource);
+            final AuthService authService = new AuthService(userDAO);
+            final User user = authService.authenticate(username, password);
 
             if (!User.ROLE_BUYER.equals(user.getRole())) {
                 request.setAttribute(
                         "error",
                         "This login is only for buyer accounts.");
-
                 request.getRequestDispatcher(LOGIN_PAGE)
                         .forward(request, response);
                 return;
             }
 
-            final HttpSession session =
-                    request.getSession(true);
-
+            final HttpSession session = request.getSession(true);
+            request.changeSessionId();
             session.setAttribute("user", user);
+            session.setAttribute("role", User.ROLE_BUYER);
+
+            final UserSettingsDAO settingsDAO =
+                    new UserSettingsDAO(dataSource);
             session.setAttribute(
-                    "role",
-                    User.ROLE_BUYER);
+                    "userSettings",
+                    settingsDAO.ensureSettings(user.getId()));
 
             response.sendRedirect(
-                    request.getContextPath()
-                            + BUYER_DASHBOARD);
-
+                    request.getContextPath() + BUYER_DASHBOARD);
         } catch (IllegalArgumentException exception) {
-
-            request.setAttribute(
-                    "error",
-                    exception.getMessage());
-
+            request.setAttribute("error", exception.getMessage());
             request.getRequestDispatcher(LOGIN_PAGE)
                     .forward(request, response);
-
         } catch (SQLException exception) {
-
             request.setAttribute(
                     "error",
-                    "Unable to login right now. "
-                            + "Please try again.");
-
+                    "Unable to login right now. Please try again.");
             request.getRequestDispatcher(LOGIN_PAGE)
                     .forward(request, response);
         }
@@ -138,20 +114,13 @@ public final class BuyerLoginServlet extends HttpServlet {
      * @throws ServletException when data source is unavailable
      */
     private HikariDataSource getDataSource(
-            final HttpServletRequest request)
-            throws ServletException {
-
-        final Object dataSource =
-                request.getServletContext()
-                        .getAttribute(
-                                DatabaseListener
-                                        .DATA_SOURCE_ATTRIBUTE);
-
+            final HttpServletRequest request) throws ServletException {
+        final Object dataSource = request.getServletContext()
+                .getAttribute(DatabaseListener.DATA_SOURCE_ATTRIBUTE);
         if (!(dataSource instanceof HikariDataSource)) {
             throw new ServletException(
                     "VR Mart database connection is unavailable.");
         }
-
         return (HikariDataSource) dataSource;
     }
 }

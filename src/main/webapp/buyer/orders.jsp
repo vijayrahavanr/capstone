@@ -16,7 +16,7 @@
 
         response.sendRedirect(
                 request.getContextPath()
-                        + "/buyer/login");
+                        + "/login");
         return;
     }
 
@@ -90,6 +90,25 @@
             background: #1e293b;
             color: #f8fafc;
             border: 1px solid #334155;
+        }
+
+        .button:hover {
+            background: #334155;
+        }
+
+        .details-button {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            background: #2563eb;
+            color: #ffffff;
+        }
+
+        .details-button:hover {
+            background: #3b82f6;
         }
 
         .order-list {
@@ -170,6 +189,36 @@
             grid-column: span 2;
         }
 
+        .order-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            padding-top: 18px;
+            border-top: 1px solid #263244;
+        }
+
+        .cancel-button {
+            padding: 10px 16px;
+            border: 0;
+            border-radius: 9px;
+            background: #dc2626;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .cancel-button:hover {
+            background: #ef4444;
+        }
+
+        .cancel-note {
+            color: #64748b;
+            font-size: 13px;
+        }
+
         .empty {
             text-align: center;
             padding: 70px 20px;
@@ -197,6 +246,7 @@
             .wide {
                 grid-column: span 1;
             }
+
         }
 
     </style>
@@ -210,11 +260,13 @@
     <div class="topbar">
 
         <div>
+
             <h1>My Orders</h1>
 
             <p class="subtitle">
-                Track your VR Mart orders
+                Track and manage your VR Mart orders
             </p>
+
         </div>
 
         <a class="button"
@@ -325,14 +377,81 @@
                             </span>
 
                             <span class="value">
+
                                 <%= order.getDeliveryLandmark() == null
                                         || order.getDeliveryLandmark()
                                             .isEmpty()
                                         ? "Not provided"
                                         : order.getDeliveryLandmark() %>
+
                             </span>
 
                         </div>
+
+                    </div>
+
+                    <!-- Specific Order Details -->
+
+                    <div class="order-actions">
+
+                        <a class="details-button"
+                           href="<%= request.getContextPath() %>/buyer/order-details?orderId=<%= order.getId() %>">
+                            View Order Details
+                        </a>
+
+                        <%
+                            if ("PENDING".equals(
+                                        order.getStatus())
+                                    || "APPROVED".equals(
+                                        order.getStatus())) {
+                        %>
+
+                            <form method="post"
+                                  action="<%= request.getContextPath() %>/orders/cancel"
+                                  onsubmit="return confirm('Are you sure you want to cancel this order?');">
+
+                                <input type="hidden"
+                                       name="orderId"
+                                       value="<%= order.getId() %>">
+
+                                <button class="cancel-button"
+                                        type="submit">
+                                    Cancel Order
+                                </button>
+
+                            </form>
+
+                        <%
+                            } else if ("SHIPPED".equals(
+                                        order.getStatus())) {
+                        %>
+
+                            <span class="cancel-note">
+                                Order has been shipped and
+                                cannot be cancelled.
+                            </span>
+
+                        <%
+                            } else if ("DELIVERED".equals(
+                                        order.getStatus())) {
+                        %>
+
+                            <span class="cancel-note">
+                                Order delivered successfully.
+                            </span>
+
+                        <%
+                            } else if ("CANCELLED".equals(
+                                        order.getStatus())) {
+                        %>
+
+                            <span class="cancel-note">
+                                This order has been cancelled.
+                            </span>
+
+                        <%
+                            }
+                        %>
 
                     </div>
 

@@ -1,10 +1,8 @@
 package com.vrmart.controller;
 
 import com.vrmart.dao.CartDAO;
-import com.vrmart.dao.OrderDAO;
 import com.vrmart.listener.DatabaseListener;
 import com.vrmart.model.CartItem;
-import com.vrmart.model.Order;
 import com.vrmart.model.User;
 
 import javax.servlet.ServletException;
@@ -18,7 +16,7 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Handles buyer checkout and order creation.
+ * Handles buyer checkout and prepares mock payment confirmation.
  */
 @WebServlet("/buyer/checkout")
 public final class CheckoutServlet extends HttpServlet {
@@ -31,12 +29,23 @@ public final class CheckoutServlet extends HttpServlet {
             "/buyer/checkout.jsp";
 
     /** Buyer cart URL. */
-    private static final String CART_URL =
-            "/buyer/cart";
+    private static final String CART_URL = "/buyer/cart";
 
-    /** Order success page. */
-    private static final String SUCCESS_PAGE =
-            "/buyer/order-success.jsp";
+    /** Payment confirmation URL. */
+    private static final String PAYMENT_URL =
+            "/buyer/payment-confirmation";
+
+    /** Maximum customer name length. */
+    private static final int MAX_NAME_LENGTH = 100;
+
+    /** Phone length. */
+    private static final int PHONE_LENGTH = 10;
+
+    /** Maximum delivery address length. */
+    private static final int MAX_ADDRESS_LENGTH = 500;
+
+    /** Maximum landmark length. */
+    private static final int MAX_LANDMARK_LENGTH = 200;
 
     /**
      * Displays the checkout page.
@@ -44,7 +53,7 @@ public final class CheckoutServlet extends HttpServlet {
      * @param request HTTP request
      * @param response HTTP response
      * @throws ServletException when processing fails
-     * @throws IOException when request processing fails
+     * @throws IOException when forwarding fails
      */
     @Override
     protected void doGet(
@@ -66,11 +75,8 @@ public final class CheckoutServlet extends HttpServlet {
                 (User) session.getAttribute("user");
 
         try {
-            final DataSource dataSource =
-                    getDataSource(request);
-
             final CartDAO cartDAO =
-                    new CartDAO(dataSource);
+                    new CartDAO(getDataSource(request));
 
             final List<CartItem> cartItems =
                     cartDAO.findByBuyer(user.getId());
@@ -98,17 +104,142 @@ public final class CheckoutServlet extends HttpServlet {
     }
 
     /**
-     * Creates an order from the checkout form.
+     * Validates checkout details and starts mock payment.
      *
      * @param request HTTP request
      * @param response HTTP response
      * @throws ServletException when processing fails
-     * @throws IOException when request processing fails
+     * @throws IOException when redirect fails
      */
     @Override
     protected void doPost(
             final HttpServletRequest request,
             final HttpServletResponse response)
+            throws ServletException, IOException {
+
+        request.setCharacterEncoding("UTF-8");
+
+        final HttpSession session =
+                request.getSession(false);
+
+        if (!isBuyer(session)) {
+            response.sendRedirect(
+                    request.getContextPath()
+                            + "/buyer/login");
+            return;
+        }
+
+        final User user =
+                (User) session.getAttribute("user");
+
+        final String customerName =
+                cleanRequired(
+                        request.getParameter("name"),
+                        MAX_NAME_LENGTH);
+
+        final String customerPhone =
+                cleanRequired(
+                        request.getParameter("phone"),
+                        PHONE_LENGTH);
+
+        final String address =
+                cleanRequired(
+                        request.getParameter("address"),
+                        MAX_ADDRESS_LENGTH);
+
+        final String landmark =
+                cleanOptional(
+                        request.getParameter("landmark"),
+                        MAX_LANDMARK_LENGTH);
+
+        final String paymentMethod =
+                request.getParameter("paymentMethod");
+
+        if (customerName == null
+                || customerPhone == null
+                || address == null) {
+
+            loadCheckoutPage(
+                    request,
+                    response,
+                    "Please enter all required delivery details.");
+            return;
+        }
+
+        if (!isValidPhone(customerPhone)) {
+            loadCheckoutPage(
+                    request,
+                    response,
+                    "Please enter a valid 10-digit phone number.");
+            return;
+        }
+
+        if (!isValidPaymentMethod(paymentMethod)) {
+            loadCheckoutPage(
+                    request,
+                    response,
+                    "Please select a valid payment method.");
+            return;
+        }
+
+        try {
+            final CartDAO cartDAO =
+                    new CartDAO(getDataSource(request));
+
+            final List<CartItem> cartItems =
+                    cartDAO.findByBuyer(user.getId());
+
+            if (cartItems.isEmpty()) {
+                response.sendRedirect(
+                        request.getContextPath()
+                                + CART_URL);
+                return;
+            }
+
+            session.setAttribute(
+                    "checkoutCustomerName",
+                    customerName);
+
+            session.setAttribute(
+                    "checkoutCustomerPhone",
+                    customerPhone);
+
+            session.setAttribute(
+                    "checkoutAddress",
+                    address);
+
+            session.setAttribute(
+                    "checkoutLandmark",
+                    landmark);
+
+            session.setAttribute(
+                    "checkoutPaymentMethod",
+                    paymentMethod);
+
+            response.sendRedirect(
+                    request.getContextPath()
+                            + PAYMENT_URL);
+
+        } catch (Exception exception) {
+            throw new ServletException(
+                    "Unable to prepare checkout.",
+                    exception);
+        }
+    }
+
+    /**
+     * Reloads checkout with a validation error.
+     *
+     * @param request HTTP request
+     * @param response HTTP response
+     * @param error validation message
+     * @throws ServletException when checkout reload fails
+     * @throws IOException when forwarding fails
+     */
+    private void loadCheckoutPage(
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final String error)
             throws ServletException, IOException {
 
         final HttpSession session =
@@ -124,104 +255,9 @@ public final class CheckoutServlet extends HttpServlet {
         final User user =
                 (User) session.getAttribute("user");
 
-        final String address =
-                request.getParameter("address");
-
-        final String landmark =
-                request.getParameter("landmark");
-
-        final String paymentMethod =
-                request.getParameter("paymentMethod");
-
-        if (address == null
-                || address.trim().isEmpty()) {
-
-            loadCheckoutPage(
-                    request,
-                    response,
-                    "Delivery address is required.");
-            return;
-        }
-
-        if (!isValidPaymentMethod(paymentMethod)) {
-
-            loadCheckoutPage(
-                    request,
-                    response,
-                    "Please select a valid payment method.");
-            return;
-        }
-
         try {
-            final DataSource dataSource =
-                    getDataSource(request);
-
             final CartDAO cartDAO =
-                    new CartDAO(dataSource);
-
-            final List<CartItem> cartItems =
-                    cartDAO.findByBuyer(user.getId());
-
-            if (cartItems.isEmpty()) {
-                response.sendRedirect(
-                        request.getContextPath()
-                                + CART_URL);
-                return;
-            }
-
-            final OrderDAO orderDAO =
-                    new OrderDAO(dataSource);
-
-            final Order order =
-                    orderDAO.createOrder(
-                            user.getId(),
-                            cartItems,
-                            address.trim(),
-                            cleanLandmark(landmark),
-                            paymentMethod);
-
-            session.setAttribute(
-                    "lastOrder",
-                    order);
-
-            response.sendRedirect(
-                    request.getContextPath()
-                            + SUCCESS_PAGE);
-
-        } catch (Exception exception) {
-            throw new ServletException(
-                    "Unable to create order.",
-                    exception);
-        }
-    }
-
-    /**
-     * Loads checkout page with an error.
-     *
-     * @param request HTTP request
-     * @param response HTTP response
-     * @param error error message
-     * @throws ServletException when forwarding fails
-     * @throws IOException when forwarding fails
-     */
-    private void loadCheckoutPage(
-            final HttpServletRequest request,
-            final HttpServletResponse response,
-            final String error)
-            throws ServletException, IOException {
-
-        final HttpSession session =
-                request.getSession(false);
-
-        final User user =
-                (User) session.getAttribute("user");
-
-        try {
-            final DataSource dataSource =
-                    getDataSource(request);
-
-            final CartDAO cartDAO =
-                    new CartDAO(dataSource);
+                    new CartDAO(getDataSource(request));
 
             final List<CartItem> cartItems =
                     cartDAO.findByBuyer(user.getId());
@@ -248,7 +284,7 @@ public final class CheckoutServlet extends HttpServlet {
     /**
      * Validates the selected payment method.
      *
-     * @param paymentMethod selected payment method
+     * @param paymentMethod submitted payment method
      * @return true when valid
      */
     private boolean isValidPaymentMethod(
@@ -260,27 +296,73 @@ public final class CheckoutServlet extends HttpServlet {
     }
 
     /**
-     * Cleans an optional landmark.
+     * Validates an Indian mobile number.
      *
-     * @param landmark landmark value
-     * @return cleaned landmark
+     * @param phone submitted phone number
+     * @return true when valid
      */
-    private String cleanLandmark(
-            final String landmark) {
+    private boolean isValidPhone(
+            final String phone) {
 
-        if (landmark == null
-                || landmark.trim().isEmpty()) {
-            return null;
-        }
-
-        return landmark.trim();
+        return phone != null
+                && phone.matches("[6-9][0-9]{9}");
     }
 
     /**
-     * Checks buyer authentication.
+     * Validates and trims a required value.
      *
-     * @param session current session
-     * @return true when buyer is logged in
+     * @param value submitted value
+     * @param maxLength maximum allowed length
+     * @return trimmed value or null
+     */
+    private String cleanRequired(
+            final String value,
+            final int maxLength) {
+
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        final String trimmed =
+                value.trim();
+
+        if (trimmed.length() > maxLength) {
+            return null;
+        }
+
+        return trimmed;
+    }
+
+    /**
+     * Validates and trims an optional value.
+     *
+     * @param value submitted value
+     * @param maxLength maximum allowed length
+     * @return trimmed value or null
+     */
+    private String cleanOptional(
+            final String value,
+            final int maxLength) {
+
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        final String trimmed =
+                value.trim();
+
+        if (trimmed.length() > maxLength) {
+            return null;
+        }
+
+        return trimmed;
+    }
+
+    /**
+     * Checks whether the current session belongs to a buyer.
+     *
+     * @param session HTTP session
+     * @return true when buyer is authenticated
      */
     private boolean isBuyer(
             final HttpSession session) {
@@ -299,10 +381,10 @@ public final class CheckoutServlet extends HttpServlet {
     }
 
     /**
-     * Returns the application data source.
+     * Gets the application data source.
      *
      * @param request HTTP request
-     * @return database data source
+     * @return application data source
      * @throws ServletException when unavailable
      */
     private DataSource getDataSource(
@@ -315,12 +397,12 @@ public final class CheckoutServlet extends HttpServlet {
                                 DatabaseListener
                                         .DATA_SOURCE_ATTRIBUTE);
 
-        if (!(source instanceof DataSource)) {
+        if (!(source instanceof DataSource dataSource)) {
             throw new ServletException(
                     "VR Mart database connection "
                             + "is unavailable.");
         }
 
-        return (DataSource) source;
+        return dataSource;
     }
 }

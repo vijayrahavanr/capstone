@@ -132,6 +132,22 @@
             );
         }
 
+        .forgot {
+            margin-top: 14px;
+            text-align: right;
+            font-size: 13px;
+        }
+
+        .forgot a {
+            color: #a5b4fc;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .forgot a:hover {
+            text-decoration: underline;
+        }
+
         .register {
             margin-top: 25px;
             text-align: center;
@@ -200,6 +216,12 @@
         </button>
 
     </form>
+
+    <div class="forgot">
+        <a href="${pageContext.request.contextPath}/forgot-password">
+            Forgot Password?
+        </a>
+    </div>
 
     <div class="register">
         Don't have a buyer account?

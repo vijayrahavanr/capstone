@@ -111,7 +111,8 @@
         }
 
         input,
-        textarea {
+        textarea,
+        select {
             width: 100%;
             padding: 13px 14px;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -128,7 +129,8 @@
         }
 
         input:focus,
-        textarea:focus {
+        textarea:focus,
+        select:focus {
             border-color: #818cf8;
         }
 
@@ -276,12 +278,24 @@
 
                 <label for="category">Category</label>
 
-                <input id="category"
-                       name="category"
-                       type="text"
-                       maxlength="100"
-                       placeholder="Example: Electronics"
-                       required>
+                <select id="category"
+                        name="category"
+                        required>
+                    <option value="">Select category</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Fashion">Fashion</option>
+                    <option value="Home &amp; Kitchen">
+                        Home &amp; Kitchen
+                    </option>
+                    <option value="Beauty">Beauty</option>
+                    <option value="Grocery">Grocery</option>
+                    <option value="Sports &amp; Fitness">
+                        Sports &amp; Fitness
+                    </option>
+                    <option value="Books">Books</option>
+                    <option value="Toys">Toys</option>
+                    <option value="Accessories">Accessories</option>
+                </select>
 
             </div>
 

@@ -16,11 +16,19 @@
     final List<Product> products =
             (List<Product>) request.getAttribute("products");
 
-    final String message =
+    String message =
             (String) request.getAttribute("message");
 
-    final String error =
+    String error =
             (String) request.getAttribute("error");
+
+    if (message == null) {
+        message = request.getParameter("message");
+    }
+
+    if (error == null) {
+        error = request.getParameter("error");
+    }
 %>
 
 <!DOCTYPE html>
@@ -259,6 +267,8 @@
             color: #fecaca;
             background: rgba(239, 68, 68, 0.10);
             border: 1px solid rgba(239, 68, 68, 0.18);
+            font-family: inherit;
+            cursor: pointer;
         }
 
         .edit-button:hover {
@@ -370,7 +380,7 @@
 
     </section>
 
-    <% if (message != null) { %>
+    <% if (message != null && !message.isBlank()) { %>
 
         <div class="message">
             <%= message %>
@@ -378,7 +388,7 @@
 
     <% } %>
 
-    <% if (error != null) { %>
+    <% if (error != null && !error.isBlank()) { %>
 
         <div class="error">
             <%= error %>
@@ -417,8 +427,8 @@
                                 && !product.getImageUrl().isBlank()) { %>
 
                             <img
-                                src="<%= product.getImageUrl() %>"
-                                alt="<%= product.getName() %>">
+                                    src="<%= product.getImageUrl() %>"
+                                    alt="<%= product.getName() %>">
 
                         <% } else { %>
 
@@ -464,17 +474,29 @@
                         <div class="actions">
 
                             <a
-                                class="edit-button"
-                                href="<%= request.getContextPath() %>/seller/products/edit?id=<%= product.getId() %>">
+                                    class="edit-button"
+                                    href="<%= request.getContextPath() %>/seller/products/edit?id=<%= product.getId() %>">
                                 Modify
                             </a>
 
-                            <a
-                                class="delete-button"
-                                href="<%= request.getContextPath() %>/seller/products/delete?id=<%= product.getId() %>"
-                                onclick="return confirm('Remove this product from VR Mart?');">
-                                Remove
-                            </a>
+                            <form
+                                    method="post"
+                                    action="<%= request.getContextPath() %>/seller/products/delete"
+                                    style="flex: 1;"
+                                    onsubmit="return confirm('Remove this product from VR Mart?');">
+
+                                <input
+                                        type="hidden"
+                                        name="id"
+                                        value="<%= product.getId() %>">
+
+                                <button
+                                        type="submit"
+                                        class="delete-button">
+                                    Remove
+                                </button>
+
+                            </form>
 
                         </div>
 
@@ -491,4 +513,5 @@
 </main>
 
 </body>
+
 </html>

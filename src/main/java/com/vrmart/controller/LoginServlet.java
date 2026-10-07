@@ -35,10 +35,6 @@ public final class LoginServlet extends HttpServlet {
     private static final String SELLER_DASHBOARD =
             "/seller/dashboard.jsp";
 
-    /** Admin dashboard path. */
-    private static final String ADMIN_DASHBOARD =
-            "/admin/dashboard.jsp";
-
     /**
      * Displays the login page.
      *
@@ -52,7 +48,6 @@ public final class LoginServlet extends HttpServlet {
             final HttpServletRequest request,
             final HttpServletResponse response)
             throws ServletException, IOException {
-
         request.getRequestDispatcher(LOGIN_PAGE)
                 .forward(request, response);
     }
@@ -70,49 +65,40 @@ public final class LoginServlet extends HttpServlet {
             final HttpServletRequest request,
             final HttpServletResponse response)
             throws ServletException, IOException {
-
         request.setCharacterEncoding("UTF-8");
-
         final String username = request.getParameter("username");
         final String password = request.getParameter("password");
 
         try {
-            final HikariDataSource dataSource =
-                    getDataSource(request);
-
+            final HikariDataSource dataSource = getDataSource(request);
             final UserDAO userDAO = new UserDAO(dataSource);
-            final AuthService authService =
-                    new AuthService(userDAO);
+            final AuthService authService = new AuthService(userDAO);
+            final User user = authService.authenticate(username, password);
 
-            final User user = authService.authenticate(
-                    username,
-                    password);
+            if (User.ROLE_ADMIN.equals(user.getRole())) {
+                request.setAttribute(
+                        "error",
+                        "Administrators must use the dedicated "
+                                + "VR Mart Admin Login.");
+                request.getRequestDispatcher(LOGIN_PAGE)
+                        .forward(request, response);
+                return;
+            }
 
-            final HttpSession session =
-                    request.getSession(true);
-
+            final HttpSession session = request.getSession(true);
+            request.changeSessionId();
             session.setAttribute("user", user);
             session.setAttribute("role", user.getRole());
 
-            redirectByRole(
-                    request,
-                    response,
-                    user.getRole());
-
+            redirectByRole(request, response, user.getRole());
         } catch (IllegalArgumentException exception) {
-            request.setAttribute(
-                    "error",
-                    exception.getMessage());
-
+            request.setAttribute("error", exception.getMessage());
             request.getRequestDispatcher(LOGIN_PAGE)
                     .forward(request, response);
-
         } catch (SQLException exception) {
             request.setAttribute(
                     "error",
-                    "Unable to login right now. "
-                            + "Please try again.");
-
+                    "Unable to login right now. Please try again.");
             request.getRequestDispatcher(LOGIN_PAGE)
                     .forward(request, response);
         }
@@ -130,17 +116,12 @@ public final class LoginServlet extends HttpServlet {
             final HttpServletRequest request,
             final HttpServletResponse response,
             final String role) throws IOException {
-
         final String destination;
-
         if (User.ROLE_SELLER.equals(role)) {
             destination = SELLER_DASHBOARD;
-        } else if (User.ROLE_ADMIN.equals(role)) {
-            destination = ADMIN_DASHBOARD;
         } else {
             destination = BUYER_DASHBOARD;
         }
-
         response.sendRedirect(
                 request.getContextPath() + destination);
     }
@@ -153,19 +134,15 @@ public final class LoginServlet extends HttpServlet {
      * @throws ServletException when data source is unavailable
      */
     private HikariDataSource getDataSource(
-            final HttpServletRequest request)
-            throws ServletException {
-
+            final HttpServletRequest request) throws ServletException {
         final Object dataSource = request
                 .getServletContext()
                 .getAttribute(
                         DatabaseListener.DATA_SOURCE_ATTRIBUTE);
-
         if (!(dataSource instanceof HikariDataSource)) {
             throw new ServletException(
                     "VR Mart database connection is unavailable.");
         }
-
         return (HikariDataSource) dataSource;
     }
 }

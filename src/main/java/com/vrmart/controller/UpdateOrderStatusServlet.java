@@ -12,9 +12,11 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 /**
- * Updates the status of a seller order.
+ * Handles seller order status updates.
  */
 @WebServlet("/seller/orders/status")
 public final class UpdateOrderStatusServlet
@@ -51,21 +53,24 @@ public final class UpdateOrderStatusServlet
             return;
         }
 
-        final String orderIdValue =
-                request.getParameter("orderId");
+        final User user =
+                (User) session.getAttribute("user");
+
+        final Long orderId =
+                parseOrderId(
+                        request.getParameter("orderId"));
 
         final String status =
                 request.getParameter("status");
 
-        final Long orderId =
-                parseOrderId(orderIdValue);
-
         if (orderId == null
                 || !isValidStatus(status)) {
 
-            response.sendRedirect(
-                    request.getContextPath()
-                            + ORDERS_URL);
+            redirect(
+                    request,
+                    response,
+                    "Invalid order status.",
+                    true);
             return;
         }
 
@@ -76,19 +81,61 @@ public final class UpdateOrderStatusServlet
             final OrderDAO orderDAO =
                     new OrderDAO(dataSource);
 
-            orderDAO.updateStatus(
-                    orderId,
-                    status);
+            final boolean updated =
+                    orderDAO.updateStatus(
+                            orderId,
+                            user.getId(),
+                            status);
 
-            response.sendRedirect(
-                    request.getContextPath()
-                            + ORDERS_URL);
+            if (updated) {
+                redirect(
+                        request,
+                        response,
+                        "Order status updated successfully.",
+                        false);
+            } else {
+                redirect(
+                        request,
+                        response,
+                        "Order status cannot be updated now.",
+                        true);
+            }
 
         } catch (Exception exception) {
             throw new ServletException(
                     "Unable to update order status.",
                     exception);
         }
+    }
+
+    /**
+     * Redirects to the seller orders page with a result message.
+     *
+     * @param request HTTP request
+     * @param response HTTP response
+     * @param message result message
+     * @param error whether the message is an error
+     * @throws IOException when redirect fails
+     */
+    private void redirect(
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final String message,
+            final boolean error)
+            throws IOException {
+
+        final String parameter =
+                error ? "error" : "message";
+
+        response.sendRedirect(
+                request.getContextPath()
+                        + ORDERS_URL
+                        + "?"
+                        + parameter
+                        + "="
+                        + URLEncoder.encode(
+                                message,
+                                StandardCharsets.UTF_8));
     }
 
     /**
@@ -113,7 +160,7 @@ public final class UpdateOrderStatusServlet
     }
 
     /**
-     * Checks whether the status is supported.
+     * Checks supported seller workflow statuses.
      *
      * @param status order status
      * @return true when valid
@@ -121,11 +168,9 @@ public final class UpdateOrderStatusServlet
     private boolean isValidStatus(
             final String status) {
 
-        return "PENDING".equals(status)
-                || "CONFIRMED".equals(status)
-                || "PROCESSING".equals(status)
-                || "SHIPPED".equals(status)
-                || "DELIVERED".equals(status);
+        return OrderDAO.STATUS_APPROVED.equals(status)
+                || OrderDAO.STATUS_SHIPPED.equals(status)
+                || OrderDAO.STATUS_DELIVERED.equals(status);
     }
 
     /**
@@ -155,7 +200,7 @@ public final class UpdateOrderStatusServlet
      *
      * @param request HTTP request
      * @return database data source
-     * @throws ServletException when unavailable
+     * @throws ServletException when data source is unavailable
      */
     private DataSource getDataSource(
             final HttpServletRequest request)
