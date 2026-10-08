@@ -2,7 +2,7 @@ FROM eclipse-temurin:26-jdk
 
 ENV TOMCAT_VERSION=9.0.122
 
-RUN apt-get update && apt-get install -y curl && \
+RUN apt-get update && apt-get install -y curl maven && \
     rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/tomcat && \
@@ -12,16 +12,13 @@ RUN mkdir -p /opt/tomcat && \
 WORKDIR /app
 
 COPY pom.xml .
-
 COPY src ./src
 
-RUN apt-get update && apt-get install -y maven && \
-    mvn clean package -DskipTests && \
-    echo "===== CHECKING LOGIN JSP INSIDE WAR =====" && \
-    jar tf target/VRMart.war | grep "login.jsp" && \
-    echo "===== LOGIN JSP CHECK COMPLETE =====" && \
-    cp target/VRMart.war /opt/tomcat/webapps/ROOT.war && \
-    rm -rf /var/lib/apt/lists/*
+RUN mvn clean package -DskipTests && \
+    rm -rf /opt/tomcat/webapps/ROOT && \
+    mkdir -p /opt/tomcat/webapps/ROOT && \
+    cd /opt/tomcat/webapps/ROOT && \
+    jar -xf /app/target/VRMart.war
 
 RUN chmod +x /opt/tomcat/bin/*.sh
 
