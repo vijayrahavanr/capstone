@@ -1,38 +1,40 @@
 package com.vrmart.service;
 
-import java.util.Properties;
-import javax.mail.Message;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 
 /**
  * Service for sending VR Mart email messages.
+ *
+ * Uses the Resend HTTPS API instead of SMTP so it works
+ * on hosting platforms where outbound SMTP ports are restricted.
  */
 public final class EmailService {
 
-    /** Default SMTP port. */
-    private static final String DEFAULT_SMTP_PORT = "587";
+    /** Resend API endpoint. */
+    private static final String RESEND_API_URL =
+            "https://api.resend.com/emails";
 
-    /** SMTP host environment variable. */
-    private static final String SMTP_HOST = "VRMART_SMTP_HOST";
+    /** Resend API key environment variable. */
+    private static final String RESEND_API_KEY =
+            "RESEND_API_KEY";
 
-    /** SMTP port environment variable. */
-    private static final String SMTP_PORT = "VRMART_SMTP_PORT";
+    /** Sender email environment variable. */
+    private static final String RESEND_FROM =
+            "RESEND_FROM";
 
-    /** SMTP username environment variable. */
-    private static final String SMTP_USERNAME = "VRMART_SMTP_USERNAME";
+    /** Successful HTTP status lower bound. */
+    private static final int HTTP_SUCCESS_MIN = 200;
 
-    /** SMTP password environment variable. */
-    private static final String SMTP_PASSWORD = "VRMART_SMTP_PASSWORD";
-
-    /** SMTP sender environment variable. */
-    private static final String SMTP_FROM = "VRMART_SMTP_FROM";
+    /** Successful HTTP status upper bound. */
+    private static final int HTTP_SUCCESS_MAX = 300;
 
     /**
-     * Sends an OTP email.
+     * Sends an OTP email through Resend.
      *
      * @param recipient recipient email address
      * @param otp one-time password
@@ -45,89 +47,95 @@ public final class EmailService {
             final String subject)
             throws MessagingException {
 
-        final String host = requiredEnvironment(SMTP_HOST);
-        final String port = environmentOrDefault(
-                SMTP_PORT,
-                DEFAULT_SMTP_PORT);
-        final String username = requiredEnvironment(SMTP_USERNAME);
-        final String password = requiredEnvironment(SMTP_PASSWORD);
-        final String from = environmentOrDefault(
-                SMTP_FROM,
-                username);
+        final String apiKey =
+                requiredEnvironment(RESEND_API_KEY);
+
+        final String from =
+                requiredEnvironment(RESEND_FROM);
 
         System.out.println("========================================");
         System.out.println("VR MART OTP EMAIL");
-        System.out.println("SMTP Host : " + host);
-        System.out.println("SMTP Port : " + port);
-        System.out.println("SMTP User : " + username);
-        System.out.println("From      : " + from);
-        System.out.println("Recipient : " + recipient);
+        System.out.println("Email Provider : Resend HTTPS API");
+        System.out.println("From          : " + from);
+        System.out.println("Recipient     : " + recipient);
         System.out.println("========================================");
 
-        final Properties properties = new Properties();
-
-        properties.put("mail.smtp.host", host);
-        properties.put("mail.smtp.port", port);
-        properties.put("mail.smtp.auth", "true");
-        properties.put("mail.smtp.starttls.enable", "true");
-
-        /*
-         * Enable JavaMail debug output.
-         * This helps us see SMTP connection/authentication errors
-         * in the Tomcat console.
-         */
-        properties.put("mail.debug", "true");
-
-        final Session session = Session.getInstance(
-                properties,
-                new javax.mail.Authenticator() {
-                    @Override
-                    protected javax.mail.PasswordAuthentication
-                            getPasswordAuthentication() {
-
-                        return new javax.mail.PasswordAuthentication(
-                                username,
-                                password);
-                    }
-                });
-
-        final Message message = new MimeMessage(session);
-
-        message.setFrom(new InternetAddress(from));
-
-        message.setRecipients(
-                Message.RecipientType.TO,
-                InternetAddress.parse(recipient));
-
-        message.setSubject(subject);
-
-        message.setText(
+        final String text =
                 "Your VR Mart verification code is: "
                         + otp
                         + "\n\nThis code expires in 10 minutes."
                         + "\n\nIf you did not request this code, "
-                        + "please ignore this email.");
+                        + "please ignore this email.";
+
+        final String requestBody =
+                "{"
+                        + "\"from\":\"" + jsonEscape(from) + "\","
+                        + "\"to\":[\"" + jsonEscape(recipient) + "\"],"
+                        + "\"subject\":\"" + jsonEscape(subject) + "\","
+                        + "\"text\":\"" + jsonEscape(text) + "\""
+                        + "}";
+
+        final HttpClient client =
+                HttpClient.newHttpClient();
+
+        final HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(RESEND_API_URL))
+                        .header(
+                                "Authorization",
+                                "Bearer " + apiKey)
+                        .header(
+                                "Content-Type",
+                                "application/json")
+                        .POST(
+                                HttpRequest.BodyPublishers
+                                        .ofString(requestBody))
+                        .build();
 
         try {
             System.out.println("=== VR MART OTP: SENDING ===");
 
-            Transport.send(message);
+            final HttpResponse<String> response =
+                    client.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString());
 
-            System.out.println("=== VR MART OTP: SENT SUCCESSFULLY ===");
+            final int statusCode =
+                    response.statusCode();
 
-        } catch (MessagingException exception) {
+            if (statusCode >= HTTP_SUCCESS_MIN
+                    && statusCode < HTTP_SUCCESS_MAX) {
 
-            System.err.println("========================================");
-            System.err.println("VR MART OTP EMAIL FAILED");
-            System.err.println("Recipient: " + recipient);
-            System.err.println("SMTP Host: " + host);
-            System.err.println("SMTP Port: " + port);
-            System.err.println("SMTP User: " + username);
-            System.err.println("========================================");
+                System.out.println(
+                        "=== VR MART OTP: SENT SUCCESSFULLY ===");
 
-            exception.printStackTrace();
+                return;
+            }
 
-            throw exception;
+            System.err.println(
+                    "VR MART OTP EMAIL FAILED");
+            System.err.println(
+                    "Resend HTTP Status: " + statusCode);
+            System.err.println(
+                    "Resend Response: " + response.body());
+
+            throw new MessagingException(
+                    "Resend email API returned HTTP "
+                            + statusCode);
+
+        } catch (InterruptedException exception) {
+
+            Thread.currentThread().interrupt();
+
+            throw new MessagingException(
+                    "Email sending was interrupted.",
+                    exception);
+
+        } catch (IOException exception) {
+
+            throw new MessagingException(
+                    "Unable to connect to Resend email API.",
+                    exception);
         }
     }
 
@@ -137,32 +145,35 @@ public final class EmailService {
      * @param name environment variable name
      * @return environment variable value
      */
-    private String requiredEnvironment(final String name) {
-        final String value = System.getenv(name);
+    private String requiredEnvironment(
+            final String name) {
+
+        final String value =
+                System.getenv(name);
 
         if (value == null || value.isBlank()) {
             throw new IllegalStateException(
-                    "Missing required environment variable: " + name);
+                    "Missing required environment variable: "
+                            + name);
         }
 
         return value;
     }
 
     /**
-     * Reads an environment variable with a fallback value.
+     * Escapes a string for JSON.
      *
-     * @param name environment variable name
-     * @param defaultValue fallback value
-     * @return environment variable value or fallback
+     * @param value input string
+     * @return JSON-safe string
      */
-    private String environmentOrDefault(
-            final String name,
-            final String defaultValue) {
+    private String jsonEscape(
+            final String value) {
 
-        final String value = System.getenv(name);
-
-        return value == null || value.isBlank()
-                ? defaultValue
-                : value;
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
+                .replace("\t", "\\t");
     }
 }
