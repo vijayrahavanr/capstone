@@ -8,6 +8,9 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -20,16 +23,9 @@ public final class DatabaseListener implements ServletContextListener {
     public static final String DATA_SOURCE_ATTRIBUTE =
             "vrMartDataSource";
 
-    /** Local VR Mart PostgreSQL database URL. */
-    private static final String DATABASE_URL =
-            "jdbc:postgresql://localhost:5432/VRMart";
-
-    /** PostgreSQL database username. */
-    private static final String DATABASE_USERNAME = "postgres";
-
-    /** PostgreSQL database password. */
-    private static final String DATABASE_PASSWORD =
-            "vrgt@*";
+    /** Railway PostgreSQL connection URL. */
+    private static final String DATABASE_URL_ENV =
+            "DATABASE_URL";
 
     /** Maximum HikariCP pool size. */
     private static final String MAXIMUM_POOL_SIZE = "10";
@@ -81,7 +77,7 @@ public final class DatabaseListener implements ServletContextListener {
 
             context.log(
                     "VR Mart database connection pool "
-                            + "initialized.");
+                            + "initialized successfully.");
 
         } catch (Exception exception) {
             context.log(
@@ -113,25 +109,58 @@ public final class DatabaseListener implements ServletContextListener {
     }
 
     /**
-     * Loads local database configuration.
+     * Loads database configuration from Railway DATABASE_URL.
      *
      * @return database properties
      */
     private Properties loadDatabaseProperties() {
 
-        final Properties properties = new Properties();
+        final String databaseUrl =
+                System.getenv(DATABASE_URL_ENV);
+
+        if (databaseUrl == null
+                || databaseUrl.isBlank()) {
+
+            throw new IllegalStateException(
+                    "DATABASE_URL environment variable is not configured.");
+        }
+
+        final URI databaseUri =
+                parseDatabaseUri(databaseUrl.trim());
+
+        final String host =
+                databaseUri.getHost();
+
+        final int port =
+                databaseUri.getPort();
+
+        final String databaseName =
+                extractDatabaseName(databaseUri);
+
+        final String jdbcUrl =
+                buildJdbcUrl(
+                        databaseUri,
+                        host,
+                        port,
+                        databaseName);
+
+        final String[] credentials =
+                extractCredentials(databaseUri);
+
+        final Properties properties =
+                new Properties();
 
         properties.setProperty(
                 "db.url",
-                DATABASE_URL);
+                jdbcUrl);
 
         properties.setProperty(
                 "db.username",
-                DATABASE_USERNAME);
+                credentials[0]);
 
         properties.setProperty(
                 "db.password",
-                DATABASE_PASSWORD);
+                credentials[1]);
 
         properties.setProperty(
                 "db.pool.maximum-size",
@@ -154,5 +183,163 @@ public final class DatabaseListener implements ServletContextListener {
                 MAX_LIFETIME);
 
         return properties;
+    }
+
+    /**
+     * Parses the Railway PostgreSQL URL.
+     *
+     * @param databaseUrl Railway DATABASE_URL
+     * @return parsed URI
+     */
+    private URI parseDatabaseUri(
+            final String databaseUrl) {
+
+        String normalizedUrl = databaseUrl;
+
+        if (normalizedUrl.startsWith("postgres://")) {
+            normalizedUrl =
+                    "postgresql://"
+                            + normalizedUrl.substring(
+                            "postgres://".length());
+        }
+
+        if (normalizedUrl.startsWith("jdbc:postgresql://")) {
+            normalizedUrl =
+                    normalizedUrl.substring(
+                            "jdbc:".length());
+        }
+
+        try {
+            return URI.create(normalizedUrl);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException(
+                    "Invalid DATABASE_URL configuration.",
+                    exception);
+        }
+    }
+
+    /**
+     * Extracts the database name from the URI path.
+     *
+     * @param databaseUri database URI
+     * @return database name
+     */
+    private String extractDatabaseName(
+            final URI databaseUri) {
+
+        final String path =
+                databaseUri.getPath();
+
+        if (path == null
+                || path.length() <= 1) {
+
+            throw new IllegalStateException(
+                    "DATABASE_URL does not contain a database name.");
+        }
+
+        return path.substring(1);
+    }
+
+    /**
+     * Builds a PostgreSQL JDBC URL.
+     *
+     * @param databaseUri database URI
+     * @param host database host
+     * @param port database port
+     * @param databaseName database name
+     * @return JDBC URL
+     */
+    private String buildJdbcUrl(
+            final URI databaseUri,
+            final String host,
+            final int port,
+            final String databaseName) {
+
+        if (host == null || host.isBlank()) {
+            throw new IllegalStateException(
+                    "DATABASE_URL does not contain a database host.");
+        }
+
+        if (port <= 0) {
+            throw new IllegalStateException(
+                    "DATABASE_URL does not contain a valid database port.");
+        }
+
+        final StringBuilder jdbcUrl =
+                new StringBuilder();
+
+        jdbcUrl.append("jdbc:postgresql://")
+                .append(host)
+                .append(":")
+                .append(port)
+                .append("/")
+                .append(databaseName);
+
+        if (databaseUri.getRawQuery() != null
+                && !databaseUri.getRawQuery().isBlank()) {
+
+            jdbcUrl.append("?")
+                    .append(databaseUri.getRawQuery());
+        }
+
+        return jdbcUrl.toString();
+    }
+
+    /**
+     * Extracts username and password from the URI.
+     *
+     * @param databaseUri database URI
+     * @return username and password
+     */
+    private String[] extractCredentials(
+            final URI databaseUri) {
+
+        final String userInfo =
+                databaseUri.getRawUserInfo();
+
+        if (userInfo == null
+                || userInfo.isBlank()) {
+
+            throw new IllegalStateException(
+                    "DATABASE_URL does not contain database credentials.");
+        }
+
+        final int separator =
+                userInfo.indexOf(':');
+
+        if (separator <= 0) {
+            throw new IllegalStateException(
+                    "DATABASE_URL contains invalid database credentials.");
+        }
+
+        final String username =
+                decode(userInfo.substring(0, separator));
+
+        final String password =
+                decode(userInfo.substring(separator + 1));
+
+        if (username.isBlank()) {
+            throw new IllegalStateException(
+                    "Database username is empty.");
+        }
+
+        return new String[] {
+                username,
+                password
+        };
+    }
+
+    /**
+     * URL-decodes a database credential.
+     *
+     * @param value encoded value
+     * @return decoded value
+     */
+    private String decode(
+            final String value) {
+
+        return URLDecoder.decode(
+                value,
+                StandardCharsets.UTF_8);
     }
 }
