@@ -17,6 +17,9 @@ COPY src ./src
 
 RUN apt-get update && apt-get install -y maven && \
     mvn clean package -DskipTests && \
+    echo "===== CHECKING LOGIN JSP INSIDE WAR =====" && \
+    jar tf target/VRMart.war | grep "login.jsp" && \
+    echo "===== LOGIN JSP CHECK COMPLETE =====" && \
     cp target/VRMart.war /opt/tomcat/webapps/ROOT.war && \
     rm -rf /var/lib/apt/lists/*
 
