@@ -24,4 +24,15 @@ RUN chmod +x /opt/tomcat/bin/*.sh
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "sed -i \"s/port=\\\"8080\\\"/port=\\\"${PORT:-8080}\\\"/\" /opt/tomcat/conf/server.xml && exec /opt/tomcat/bin/catalina.sh run"]
+CMD ["sh", "-c", "\
+sed -i \"s/port=\\\"8080\\\"/port=\\\"${PORT:-8080}\\\"/\" /opt/tomcat/conf/server.xml && \
+echo '===== STARTING TOMCAT DEBUG MODE =====' && \
+/opt/tomcat/bin/catalina.sh run & \
+TOMCAT_PID=$! && \
+sleep 8 && \
+echo '===== TOMCAT LOCALHOST LOG =====' && \
+cat /opt/tomcat/logs/localhost.* 2>/dev/null || true && \
+echo '===== TOMCAT CATALINA LOG =====' && \
+cat /opt/tomcat/logs/catalina.* 2>/dev/null || true && \
+echo '===== END TOMCAT DEBUG LOG =====' && \
+wait $TOMCAT_PID"]
